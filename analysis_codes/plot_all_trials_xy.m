@@ -10,7 +10,6 @@
 clc;
 clear all;
 close all;
-addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
 
 %% set up files
 % Get current directory and move one level up
