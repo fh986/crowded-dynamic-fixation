@@ -93,9 +93,9 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
         framesPerSec = 60;
         eyedrift = calcDrift(currenttrial_ee_track,currenttrial_el_track,PixelPerDeg,framesPerSec);
 
-        %%%%%%%%%%%%%%%%%%%%
-        % Drift correction %
-        %%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%
+        % Gaze positions %
+        %%%%%%%%%%%%%%%%%%
         % record the x and y positions of gaze      
         trial_ee_stim = find(easyeyes.posixTimeSec == stim_timestamp);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);

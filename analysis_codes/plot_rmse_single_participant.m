@@ -1,26 +1,44 @@
-% plot RMSE, one participant
+% plot_rmse_single_participant.m
+% Author: Helen Hu
+% Last modified: March 6th, 2025
+
+% This file calculates and plots the RMSE for each session. 
+% 1) Drift: drift of eye tracking was corrected for each frame
+% by subtracting the average gaze error during the last 400 of 
+% the "track" period.
+% 2) Gaze error for each trial: for each frame in a trial, 
+% the distance between gaze and crosshair center was calculated
+% >>> One number per frame (time point) of each trial
+% 3) Gaze error RMSE across trials: for each time point, RMSE was taken
+% across 70 trials for each condition
+% >>> One number per frame (time point) of each condition
+% 4) Plotting: gaze error RMSE over time was plotted for each condition
+
 
 clc;
 clear all;
-%close all;
-addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
+close all;
 
 %% set up files
-
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/aaa_Stationary_Dynamic_Flies_Codes';
-      
+% Get current directory and move one level up
+scriptDir = pwd;
+repoDir = fileparts(scriptDir);
+% add some functions for gaze analysis
+addpath(fullfile(repoDir,'Gaze_Package'));
+% data files for gaze
+mydir = fullfile(repoDir,'data_include_forGaze_20ppl_paired');
+ 
 [cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
 numSubj = length(cursorFiles);
 
 %% gaze analyses
 
-for subj = 1:numSubj
+for subj = 33
 
-    %opt = detectImportOptions('*_cursor.csv');% if use opts, offset by 1
-    easyeyes = readtable([mydir filesep cursorFiles{subj}]);
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
-    eyelink = readtable([mydir filesep eyelinkFiles{subj}]);
+    easyeyes = readtable([mydir filesep cursorFiles{subj}],'VariableNamingRule','preserve');
+    mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
+    eyelink = readtable([mydir filesep eyelinkFiles{subj}],'VariableNamingRule','preserve');
     
     % count stimuli presentations
     trialRoutine = strcmp(easyeyes.targetBool,'TRUE');
@@ -34,18 +52,18 @@ for subj = 1:numSubj
     track_on = find(diff_trackRout == 1)+1;
     trackingInfo = easyeyes(track_on,:);
 
-    if contains(eyelinkFiles{subj}, 'MarcoLai061024')
+    % account for special cases
+    if contains(eyelinkFiles{subj}, 'ML1_M')
         track_on(198) = [];
     end
-    if contains(eyelinkFiles{subj}, 'KevinHong061624')
+    if contains(eyelinkFiles{subj}, 'KH2_K')
         track_on(15) = [];
     end
-
-
     if(length(stim_on) ~= length(track_on))
         track_on = [1;track_on];
     end
 
+    % check that the indices are reasonable
     assert(~any((stim_on - track_on)<=0));
    
     % pixel to deg
@@ -54,40 +72,37 @@ for subj = 1:numSubj
     distance = 40; %cm
     [PixelPerDeg,px_to_deg] = convertPxDeg(screenWidthPx,screenWidthCm,distance);
 
-
-
-
-
-    % count peek
-    % timeframe_stimon = 0.15;
     timeframe_starttrack = 0.4; % disregard the first 400 ms of tracking 
     % as the eye might be still looking for the crosshair
     recFrames = 21;
     gaze_err_mtx = NaN(length(stim_on),2*recFrames+1);
 
+    % determine what trials to include
     trials_include = 1:length(stim_on);
-    if contains(eyelinkFiles{subj}, 'KevinHong061624')
+    if contains(eyelinkFiles{subj}, 'KH2_K')
         trials_include = 2:length(stim_on);
     end
     
-
     for s = trials_include
 
-        % first, focus on the full tracking period and correct for drift
-        % amount for correction
+        %%%%%%%%%%%%%%%%%%%%
+        % Drift correction %
+        %%%%%%%%%%%%%%%%%%%%
+        % focus on the full tracking period and correct for drift
         stim_timestamp = easyeyes(stim_on(s),:).posixTimeSec; 
         track_timestamp = easyeyes(track_on(s),:).posixTimeSec;
-        trial_ee_track = easyeyes.posixTimeSec > (stim_timestamp -  timeframe_starttrack) & easyeyes.posixTimeSec < (stim_timestamp);
+        trial_ee_track = easyeyes.posixTimeSec > (stim_timestamp - timeframe_starttrack) & easyeyes.posixTimeSec < (stim_timestamp);
         currenttrial_ee_track = easyeyes(trial_ee_track,:);
-    
+        % correct for a time difference between eyelink and easyeyes data
         trial_el_track = eyelink.t1+14400 > (stim_timestamp -  timeframe_starttrack) & eyelink.t1+14400 < (stim_timestamp);
         currenttrial_el_track = eyelink(trial_el_track,:);
-
         framesPerSec = 60;
         eyedrift = calcDrift(currenttrial_ee_track,currenttrial_el_track,PixelPerDeg,framesPerSec);
-        %disp(eyedrift)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % then, analyze gaze      
+
+        %%%%%%%%%%%%%%%%%%
+        % Gaze positions %
+        %%%%%%%%%%%%%%%%%%
+        % record the x and y positions of gaz  
         trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp - 0.5) & easyeyes.posixTimeSec < (stim_timestamp + 0.5);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
         nearpointPx = str2num(cell2mat(currenttrial_ee_stimon.nearpointXYPx));
@@ -106,7 +121,7 @@ for subj = 1:numSubj
         end
 
 
-        [newGazePx,nantrialBool] = ignoreBlink(gazePx,PixelPerDeg,framesPerSec);
+        [newGazePx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
         if nantrialBool
             disp(currenttrial_ee_stimon.conditionName(1))
         end
@@ -220,72 +235,5 @@ function [] = createPatch(onset,offset)
     stimulus_height = [y_limits(1) y_limits(1) y_limits(2) y_limits(2)];
     stimulus_duration = [onset offset offset onset];
     patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none','HandleVisibility','off')
-
-end
-
-function [newGazePx,nantrialBool] = ignoreBlink(gazePx,pxPerDeg,framesPerSec)
-% detects blinks based on the criterion: saccade velocity > 2000 deg/sec
-% replaces the 100 msecs before and after the blink with the gaze position
-% in the frame after the blink
-% if the blink happens at the end of the sequence, replace with the frame
-% before the blink
-
-   
-    gazeDeg = gazePx/pxPerDeg;
-    
-    velocity = eyeVelocity(gazeDeg,framesPerSec);
-    delFrames = round(0.1*framesPerSec);
-    
-    replaceIdx = [];
-    for ii = 1:length(velocity)
-    
-       if any([velocity(ii) > 1000;  abs(gazeDeg(ii,1)) >20;abs(gazeDeg(ii,2)) >20])
-            replaceIdx = [replaceIdx,ii-delFrames:ii+delFrames];
-       end
-
-    end
-    
-    replaceIdx(replaceIdx<=0) = [];
-    replaceIdx(replaceIdx>size(gazeDeg,1)) = [];
-    replaceIdx = unique(replaceIdx);
-
-    % are there multiple blinks?
-    difference = diff(replaceIdx);
-    multipleBool = any(difference~=1);
-    blinks = {};
-    if ~multipleBool
-        blinks{1} = replaceIdx;
-    else
-        breaks = find(difference~=1);
-        breaks = [0,breaks,length(replaceIdx)];
-        for blinkNumber = 1:length(breaks)-1
-            blinks{blinkNumber} = replaceIdx(breaks(blinkNumber)+1:breaks(blinkNumber+1));
-        end
-    end
-
-    newGazePx = gazePx;
-    nantrialBool = 0;
-    if ~isempty(replaceIdx)
-        if length(replaceIdx) == length(gazePx)
-            newGazePx = NaN(size(gazePx));
-            nantrialBool = 1;
-        else
-            for blinkNumber = 1:length(blinks)
-                thisBlink = blinks{blinkNumber};
-                replacePosition = [];
-                
-                if ismember(size(gazeDeg,1),thisBlink)
-                    replacePosition = gazePx(thisBlink(1)-1,:);
-                else
-                    replacePosition = gazePx(thisBlink(end)+1,:);
-                end 
-    
-                for frame = thisBlink
-                    newGazePx(frame,:) = replacePosition;
-                end
-            end
-        end
-    end
-
 
 end
