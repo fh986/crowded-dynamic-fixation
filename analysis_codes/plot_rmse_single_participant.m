@@ -72,8 +72,8 @@ for subj = 33
     distance = 40; %cm
     [PixelPerDeg,px_to_deg] = convertPxDeg(screenWidthPx,screenWidthCm,distance);
 
-    timeframe_starttrack = 0.4; % disregard the first 400 ms of tracking 
-    % as the eye might be still looking for the crosshair
+    timeframe_starttrack = 0.4; % only include the last 400 ms of tracking
+    % for calculating eye drift
     recFrames = 21;
     gaze_err_mtx = NaN(length(stim_on),2*recFrames+1);
 
@@ -88,7 +88,7 @@ for subj = 33
         %%%%%%%%%%%%%%%%%%%%
         % Drift correction %
         %%%%%%%%%%%%%%%%%%%%
-        % focus on the full tracking period and correct for drift
+        % focus on the tracking period and correct for drift
         stim_timestamp = easyeyes(stim_on(s),:).posixTimeSec; 
         track_timestamp = easyeyes(track_on(s),:).posixTimeSec;
         trial_ee_track = easyeyes.posixTimeSec > (stim_timestamp - timeframe_starttrack) & easyeyes.posixTimeSec < (stim_timestamp);
@@ -102,7 +102,7 @@ for subj = 33
         %%%%%%%%%%%%%%%%%%
         % Gaze positions %
         %%%%%%%%%%%%%%%%%%
-        % record the x and y positions of gaz  
+        % record the x and y positions of gaze  
         trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp - 0.5) & easyeyes.posixTimeSec < (stim_timestamp + 0.5);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
         nearpointPx = str2num(cell2mat(currenttrial_ee_stimon.nearpointXYPx));
@@ -177,10 +177,10 @@ for subj = 33
         whichBlock = find(strcmp(plot_sequence{line},block_sequence));
         trialStart = (whichBlock-1)*70+1;
         trialEnd = whichBlock*70;
-        % if contains(eyelinkFiles{subj}, 'MarcoLai061024') && trialEnd == 210
+        % if contains(eyelinkFiles{subj}, 'ML1_M') && trialEnd == 210
         %     trialEnd = 209;
         % end
-        % if contains(eyelinkFiles{subj}, 'KevinHong061624') 
+        % if contains(eyelinkFiles{subj}, 'KH2_K') 
         %     trialEnd = trialEnd-1;
         %     trialStart = trialStart+1;
         % end
@@ -202,11 +202,8 @@ for subj = 33
         plotRMSE(xValues,gaze_err_mtx(trialStart:trialEnd,:),cell2mat(dictionary_lineStyle(blockCond)),blockName,cell2mat(dictionary_lineColors(blockCond))) 
     end
 
-    secondRunBool = rem(subj,2) == 0;
-    % legend('Location','northwest');
-    
-
-    % title(sprintf('Participant %d Run %d',floor((subj+1)/2),secondRunBool + 1))
+    legend('Location','northwest');
+    title(sprintf('Gaze RMSE over time, session #%d',subj))
     hold off;
 
     
@@ -234,6 +231,6 @@ function [] = createPatch(onset,offset)
     y_limits = ylim();
     stimulus_height = [y_limits(1) y_limits(1) y_limits(2) y_limits(2)];
     stimulus_duration = [onset offset offset onset];
-    patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none','HandleVisibility','off')
+    patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.1, 'EdgeColor', 'none','HandleVisibility','off')
 
 end

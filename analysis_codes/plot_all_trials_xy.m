@@ -46,10 +46,10 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
     trackingInfo = easyeyes(track_on,:);
 
     % special cases
-    if contains(eyelinkFiles{subj}, 'MarcoLai061024')
+    if contains(eyelinkFiles{subj}, 'ML1_M')
         track_on(198) = [];
     end
-    if contains(eyelinkFiles{subj}, 'KevinHong061624')
+    if contains(eyelinkFiles{subj}, 'KH2_K')
         track_on(15) = [];
     end
     if(length(stim_on) ~= length(track_on))
@@ -73,7 +73,7 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
 
     % determine what trials to include
     trials_include = 1:length(stim_on);
-    if contains(eyelinkFiles{subj}, 'KevinHong061624')
+    if contains(eyelinkFiles{subj}, 'KH2_K')
         trials_include = 2:length(stim_on);
     end    
 
@@ -148,10 +148,10 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
     thirdBlockStart = 141;
     thirdBlockEnd = 210;
     % manually correct for special cases
-    if contains(eyelinkFiles{subj}, 'MarcoLai061024')
+    if contains(eyelinkFiles{subj}, 'ML1_M')
         thirdBlockEnd = 209;
     end
-    if contains(eyelinkFiles{subj}, 'KevinHong061624')
+    if contains(eyelinkFiles{subj}, 'KH2_K')
         firstBlockEnd = 69;
         secondBlockStart = 70;
         secondBlockEnd = 139;
