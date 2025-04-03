@@ -5,6 +5,9 @@ This folder contains materials and codes for the project "EasyEyes: crowded dyna
 ## easyeyes_materials
 This folder contains materials needed for creating the EasyEyes experiment used in the study. One can upload the files to easyeyes.app to compile the experiment.
 
+## easyeyes_handshaking
+This folder contains codes and functions needed to record Eyelink data. To record data, install Psychtoolbox and CriticalSpacing, and run easyeyesHandshaking.m.
+
 ## data_include_forGaze_20ppl_paired
 This folder contains data from the 20 participants included for gaze analysis.
 
