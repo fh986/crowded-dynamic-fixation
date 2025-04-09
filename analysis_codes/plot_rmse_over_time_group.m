@@ -176,7 +176,7 @@ end
 
 frame_interval = mean(diff(easyeyes.posixTimeSec(1:10*60)));
 xValues = linspace(-frame_interval*recFrames,frame_interval*recFrames,recFrames_total);
-% save('subj_rmse.mat','subj_stationary_rmse','subj_dynamic_rmse','subj_flies_rmse','xValues');
+save('subj_rmse.mat','subj_stationary_rmse','subj_dynamic_rmse','subj_flies_rmse','xValues');
 
 %% plot
 dictionary_lineColors = dictionary({'Stationary','Dynamic','Flies'},{'#7E2F8E','#D95319','#0072BD'});
