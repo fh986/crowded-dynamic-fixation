@@ -1,4 +1,11 @@
-% count peek times
+% plot_peek_number_sweep.m
+% Author: Helen Hu
+% Last modified: Mar 7th, 2025
+
+% This file counts the number of time a participant peeks according to a
+% given criterion.
+% In the end, it saves the number of peeking locally.
+
 clc;
 clear all;
 %close all;
@@ -7,15 +14,22 @@ addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
 
 %% set up files
 
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/data_include_forGaze_20ppl_paired';
-    
+% Get current directory and move one level up
+scriptDir = pwd;
+repoDir = fileparts(scriptDir);
+% add some functions for gaze analysis
+addpath(fullfile(repoDir,'Gaze_Package'));
+% data files for gaze
+mydir = fullfile(repoDir,'data_include_forGaze_20ppl_paired');
+     
 [cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
 numSubj = length(cursorFiles);
 
 %% gaze analyses
 
-peek_criterion = 1.51;
+% set the peek criterion here
+peek_criterion = 1; % deg
 
 subj_stationary_count = NaN(numSubj,1);
 subj_dynamic_count = NaN(numSubj,1);
@@ -23,10 +37,9 @@ subj_flies_count = NaN(numSubj,1);
 
 for subj = 1:numSubj
 
-    %opt = detectImportOptions('*_cursor.csv');% if use opts, offset by 1
-    easyeyes = readtable([mydir filesep cursorFiles{subj}]);
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
-    eyelink = readtable([mydir filesep eyelinkFiles{subj}]);
+    easyeyes = readtable([mydir filesep cursorFiles{subj}],'VariableNamingRule','preserve');
+    mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
+    eyelink = readtable([mydir filesep eyelinkFiles{subj}],'VariableNamingRule','preserve');
     
     % count stimuli presentations
     trialRoutine = strcmp(easyeyes.targetBool,'TRUE');
@@ -54,8 +67,6 @@ for subj = 1:numSubj
     assert(~any((stim_on - track_on)<=0));
    
 
-
-
     % pixel to deg
     screenWidthCm = unique(mainOutput.screenWidthByObjectCm(~isnan(mainOutput.screenWidthByObjectCm)));
     screenWidthPx = unique(mainOutput.screenWidthPx(~isnan(mainOutput.screenWidthPx)));
@@ -79,6 +90,9 @@ for subj = 1:numSubj
 
     for s = trials_include
 
+        %%%%%%%%%%%%%%%%%%%%
+        % Drift correction %
+        %%%%%%%%%%%%%%%%%%%%
         % first, focus on the full tracking period and correct for drift
         % amount for correction
         stim_timestamp = easyeyes(stim_on(s),:).posixTimeSec; 
@@ -95,7 +109,11 @@ for subj = 1:numSubj
             fprintf('No Gaze Correction: subj = %d, trial = %d\n',subj,s);
             eyedrift = [0 0];
         end     
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        %%%%%%%%%%%%%%%%%%
+        % Gaze positions %
+        %%%%%%%%%%%%%%%%%%
+        % x and y positions of gaze 
         % then, analyze gaze      
         trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp) & easyeyes.posixTimeSec < (stim_timestamp + timeframe_stimon);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
@@ -105,7 +123,6 @@ for subj = 1:numSubj
         trial_eyelink = eyelink.t1+14400 > (stim_timestamp) & eyelink.t1+14400 < (stim_timestamp + timeframe_stimon);
         currenttrial_el = eyelink(trial_eyelink,:);
         
-
         gazePx = [];
         for tt = 1:length(crosshairPx)
             [v,ind] = min(abs(currenttrial_el.t1 + 14400 - currenttrial_ee_stimon.posixTimeSec(tt)));
@@ -113,8 +130,11 @@ for subj = 1:numSubj
             gazePx(tt,2) = -currenttrial_el.gazeXYPix_2(ind) - eyedrift(2);
         end
 
-
+        % ignore blinks
         [newGazePx,nantrialBool] = ignoreBlink(gazePx,PixelPerDeg,framesPerSec);
+        % if the participant keeps blinking throughout the tracking period,
+        % it will show up as a blank trial
+        % if that's the case, print a warning message
         if nantrialBool
             fprintf('Empty gaze, exclude: subj = %d, trial = %d, condition = %s\n',subj,s,cell2mat(currenttrial_ee_stimon.conditionName(1)))
         end
@@ -126,6 +146,7 @@ for subj = 1:numSubj
 
         diff_gaze_cross_Deg = diff_gaze_cross_Px./PixelPerDeg;
 
+        % add to the counter if the participant peeks during the trial
         if any(diff_gaze_cross_Deg > peek_criterion)
             if contains(trialStimInfo.conditionName(s),'Stationary')
                 stationary_count = stationary_count + 1;
@@ -142,18 +163,14 @@ for subj = 1:numSubj
     end
 
     %% save break fixation counts
-
     subj_stationary_count(subj) = stationary_count;
     subj_dynamic_count(subj) = dynamic_count;
     subj_flies_count(subj) = flies_count;    
 end
 
 %% save to file
-
 matFile_name = sprintf('PeekingSummary_%f.mat',peek_criterion);
 save(matFile_name, 'subj_stationary_count', 'subj_dynamic_count', 'subj_flies_count');
-
-
 
 %% functions
 function [sem] = sem(data)
