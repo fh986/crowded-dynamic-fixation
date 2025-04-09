@@ -1,15 +1,20 @@
-% plot all trials 
-% plot x gaze position not downsampled
+% plot_tracking_demo.m
+% Author: Helen Hu
+% Last edited: Apr 9th, 2025
+
+% This is a script for plotting cursor data over time.
+% It does so for individual trials, plotting the x- and y-components of the
+% cursor positions over time for each trial.
+
+
 clc;
 clear all;
-%close all;
-addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
+close all;
 
 %% set up files
 
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/aaa_Stationary_Dynamic_Flies_Codes/tracking_demo_30s';
+mydir = pwd;
     
-
 d = dir(sprintf('%s/*.csv',mydir));
     
 files = {d.name};
@@ -37,9 +42,8 @@ recFrames = 1300;
 
 for subj = 1%:numSubj
 
-    %opt = detectImportOptions('*_cursor.csv');% if use opts, offset by 1
-    easyeyes = readtable([mydir filesep cursorFiles{subj}]);
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
+    easyeyes = readtable([mydir filesep cursorFiles{subj}], 'VariableNamingRule','preserve');
+    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule','preserve');
    
 
     % count tracking
@@ -128,25 +132,6 @@ for subj = 1%:numSubj
     frame_interval = mean(diff(easyeyes.posixTimeSec(1:10*60)));
     xValues = linspace(0,frame_interval*recFrames,recFrames);
 
-    % for ii = trials_include
-    %     plot_tracking_xy(xValues,crosshair_x_mtx(ii,:),crosshair_y_mtx(ii,:),cursor_x_mtx(ii,:),cursor_y_mtx(ii,:))
-    %     sgtitle(sprintf('Subject %d, trial %d', subj, ii))
-    % end
-    % 
-    % for ii = trials_include
-    %     figure;clf;
-    %     hold on;
-    %     xlabel('Time (s)');
-    %     ylabel('Cursor tracking error (deg)');
-    %     set(gca,'Fontsize',18)
-    %     xlim([0 26])
-    %     ylim([0 1])
-    %     yline(0.15,'r--','LineWidth',2)
-    %     plot(xValues,tracking_error(ii,:),'-','Color',[0 0.4470 0.7410],'LineWidth',3);
-    %     title(sprintf('Subject %d, trial %d', subj, ii))
-    %     set(gcf, 'Position', [100, 100, 800, 250])
-    %     hold off;
-    % end
 
     for ii = trials_include
         plot_trace_error(xValues,crosshair_x_mtx(ii,:), cursor_x_mtx(ii,:), tracking_error(ii,:))
