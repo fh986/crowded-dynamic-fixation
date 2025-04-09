@@ -1,17 +1,25 @@
-% plot thresholds
+% plot_thresholds.m
+% Author: Helen Hu
+% Last edited: Apr. 9th, 2025
+
+% This script acquires threshold data, average over two sessions for each
+% participant, bootstrap over participants, and plots the group data with
+% error bars being confidence interval from bootstrapping.
 
 
 clc;
 clear all;
-%close all;
+close all;
  
-
-addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
-
 %% set up files
-
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking_Parameters_Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/data_include_threshold_18ppl_paired';
-    
+% Get current directory and move one level up
+scriptDir = pwd;
+repoDir = fileparts(scriptDir);
+% add some functions for gaze analysis
+addpath(fullfile(repoDir,'Gaze_Package'));
+% data files for gaze
+mydir = fullfile(repoDir,'data_include_threshold_18ppl_paired');
+   
 [cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
 numSubj = length(cursorFiles);
@@ -28,7 +36,7 @@ subj_exclude = [];
 
 for subj = 1:numSubj
 
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
+    mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
 
     block_sequence = unique(mainOutput.blockShuffleGroups1,'stable');
     rm = cellfun("isempty",block_sequence);
@@ -96,7 +104,6 @@ subj_avg_dynamic_right = avgOverSubj(subj_dynamic_right);
 subj_avg_flies_left = avgOverSubj(subj_flies_left);
 subj_avg_flies_right = avgOverSubj(subj_flies_right);
 
-   
 
 thresholds = {
     subj_avg_stationary_left,...
@@ -222,9 +229,6 @@ subj_dynamic_rightB = subj_dynamic_right./10;
 subj_flies_leftB = subj_flies_left./10;
 subj_flies_rightB = subj_flies_right./10;
 
-% subj_stationary_leftB = subj_stationary_left./10*0.7;
-% subj_dynamic_leftB = subj_dynamic_left./10*0.7;
-% subj_flies_leftB = subj_flies_left./10*0.7;
 %%
 CData2 = { ...
     [0.5600, 0.1600, 0.6000], ...  % Purple variation
@@ -290,32 +294,12 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
         yPatch2 = [counts1(ii), counts1(ii), counts1(ii) + counts2(ii), counts1(ii) + counts2(ii)];
         patch(xPatch, yPatch2, color1, 'EdgeColor', 'k', ...
             'EdgeAlpha', 1, 'FaceAlpha', 0.8);
-    
-        disp(xPatch)
-        disp(yPatch1)
-        disp(yPatch2)
+
     end
     xline(minJOVbouma,'r--','LineWidth',2);
 
 end
 
-function [] = plotHistLog(data,binEdges,xlimit,ylimit,titletxt,color)
-
-
-    a = histogram(data,'BinEdges',binEdges);
-    a.FaceColor = color; 
-    a.EdgeColor = color;
-    a.FaceAlpha = 0.6;
-    a.EdgeAlpha = 0.6;
-    ylim(ylimit)
-    xlim(xlimit)
-    set(gca,'XScale','log')
-    set(gca,'FontSize',15)
-    title(titletxt)
-    ylabel('Frequency')
-
-
-end
 
 function [subj_avg_threshold] = avgOverSubj(session_threshold)
 

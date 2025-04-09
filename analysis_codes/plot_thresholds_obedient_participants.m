@@ -1,4 +1,10 @@
-% takes in peeking summary and plot
+% plot_thresholds_obedient_participants.m
+% Author: Helen Hu
+% Last edited: Apr. 9th, 2025
+
+% This script first take in a peeking summary created earlier, 
+% then pull out participants who did not peek in any of the conditions,
+% and plot their crowding thresholds.
 
 clc;
 clear all;
@@ -10,11 +16,14 @@ numSessions = 40;
 numTrials = 70;
 
 criterion = '1.510000';
-addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
-
-%%
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/aaa_Stationary_Dynamic_Flies_Codes';
-
+% Get current directory and move one level up
+scriptDir = pwd;
+repoDir = fileparts(scriptDir);
+% add some functions for gaze analysis
+addpath(fullfile(repoDir,'Gaze_Package'));
+% data files for gaze
+mydir = fullfile(repoDir,'analysis_codes');
+  
 d = dir(sprintf('%s/_PeekingSummary_%s.mat',mydir,criterion));
     
 files = {d.name};
@@ -51,7 +60,7 @@ disp(sessions_include)
 
 %% set up files
 
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/data_include_forGaze_20ppl_paired';
+mydir = fullfile(repoDir,'data_include_forGaze_20ppl_paired/');
     
 [cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
@@ -70,7 +79,7 @@ for subj = sessions_include
 
 
 
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
+    mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
 
     block_sequence = unique(mainOutput.blockShuffleGroups1,'stable');
     rm = cellfun("isempty",block_sequence);
@@ -239,12 +248,29 @@ upperError = exp(confIntervals(:, 2)') - meanThresholds;
 errorBars = [lowerError; upperError];
 
 %%
-% Plot the bar graph with error bars
+% Define jitter amount
+jitterAmount = 0.05; 
+jitter = (rand(1,3) - 0.5) * jitterAmount * 2; 
+
+xPositions = [1, 2];
+
 figure;
 hold on;
-plot([1 2], [meanThresholds(1) meanThresholds(2)], 'o-', 'Color', CData{1}, 'LineWidth', 3,'MarkerSize',9, 'DisplayName','Stationary');
-plot([1 2], [meanThresholds(3) meanThresholds(4)], 'o-', 'Color', CData{2}, 'LineWidth', 3,'MarkerSize',9, 'DisplayName','Dynamic');
-plot([1 2], [meanThresholds(5) meanThresholds(6)], 'o-', 'Color', CData{3}, 'LineWidth', 3,'MarkerSize',9, 'DisplayName','Crowded dynamic');
+numGroups = 3;
+
+for ii = 1:numGroups
+    idx1 = (ii - 1) * 2 + 1;
+    idx2 = idx1 + 1;
+    
+    xJittered = xPositions + jitter(ii);
+
+    plot(xJittered, [meanThresholds(idx1), meanThresholds(idx2)], 'o-', ...
+        'Color', CData{ii}, 'LineWidth', 3, 'MarkerSize', 9);
+    errorbar(xJittered(1), meanThresholds(idx1), lowerError(idx1), upperError(idx1), ...
+        'LineStyle', 'none', 'Color', CData{ii}, 'LineWidth', 2, 'CapSize', 0,'HandleVisibility','off');
+    errorbar(xJittered(2), meanThresholds(idx2), lowerError(idx2), upperError(idx2), ...
+        'LineStyle', 'none', 'Color', CData{ii}, 'LineWidth', 2, 'CapSize', 0,'HandleVisibility','off');
+end
 
 set(gca, 'YScale', 'log');
 set(gca,'FontSize',18)
@@ -255,15 +281,6 @@ xlim([0 3])
 % xlabel('Condition');
 ylabel('Crowding thresholds (deg)');
 % title('Effect of Background on Crowding Thresholds');
-
-
-errorbar(1, meanThresholds(1), lowerError(1),upperError(1), 'LineStyle', 'none', 'Color', CData{1}, 'LineWidth', 2, 'HandleVisibility','off');
-errorbar(2, meanThresholds(2), lowerError(2),upperError(2), 'LineStyle', 'none', 'Color', CData{1}, 'LineWidth', 2, 'HandleVisibility','off');
-errorbar(1, meanThresholds(3), lowerError(3),upperError(3), 'LineStyle', 'none', 'Color', CData{2}, 'LineWidth', 2, 'HandleVisibility','off');
-errorbar(2, meanThresholds(4), lowerError(4),upperError(4), 'LineStyle', 'none', 'Color', CData{2}, 'LineWidth', 2, 'HandleVisibility','off');
-errorbar(1, meanThresholds(5), lowerError(5),upperError(5), 'LineStyle', 'none', 'Color', CData{3}, 'LineWidth', 2, 'HandleVisibility','off');
-errorbar(2, meanThresholds(6), lowerError(6),upperError(6), 'LineStyle', 'none', 'Color', CData{3}, 'LineWidth', 2, 'HandleVisibility','off');
-hold off;
 ylim([1,6]);
 % legend();
 
