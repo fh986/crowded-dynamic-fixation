@@ -1,12 +1,24 @@
-% plot RMSE with bootstrapping
-% input: subj_rmse.mat
-% 3 matrices with # of rows being: number of subjects
+% bootstrap_plot_rmse_group.m
+% Author: Helen Hu
+% Last modified: Apr 9th, 2025
+% This script takes in cleaned-up data of participant's tracking RMSE
+% over time, average and bootstrap over participants, and plots 
+% the group average with confidence intervals calculated from bootstrapping.
+% It also calculates and plots the following ratios:
+% RMSE in dynamic / RMSE in stationary; RMSE in crowded dynamic / RMSE in
+% stationary.
+% This script generates Fig. 4 in Hu et al., 2025.
+
+% Input: subj_rmse.mat
+% 3 matrices (each for one fixation condition) with 
+% # of rows being: number of subjects
 % and # of columns being: all time points collected
 % assuming each participant is tested twice and the data are paired
 % 1st row = 1st participant sess 1; 2nd row: 1st participant sess 2,etc.
+% This file also contains x values for plotting
 
 clear all;
-% close all;
+close all;
 clc;
 
 %% set up
@@ -83,7 +95,6 @@ avg_fliesVstationary = avg_flies_std ./ avg_stationary_std;
 figure;clf;
 
 % set up the graph 
-
 xlabel('Time (s)');
 ylabel('Ratio of fixation error RMSE (relative to stationary)');
 set(gca,'Fontsize',18)
@@ -148,7 +159,8 @@ fill([xValues, fliplr(xValues)], [upperCI_flies, fliplr(lowerCI_flies)],  ...
 % legend('Location','northwest');
 % title('Average (N = 20)')
 hold off;
-%%
+
+
 %%
 figure;clf;
 
