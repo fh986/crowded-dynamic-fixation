@@ -1,13 +1,39 @@
-% plot RMSE, one participant
+% plot_rmse_single_participant_ratio.m
+% Author: Helen Hu
+% Last modified: Apr 9th, 2025
+
+% This file calculates two RMSE ratios: 
+% dynamic/stationary and crowded dynamic/stationary
+% RMSE calculation:
+% 1) Drift: drift of eye tracking was corrected for each frame
+% by subtracting the average gaze error during the last 400 of 
+% the "track" period.
+% 2) Gaze error for each trial: for each frame in a trial, 
+% the distance between gaze and crosshair center was calculated
+% >>> One number per frame (time point) of each trial
+% 3) Gaze error RMSE across trials: for each time point, RMSE was taken
+% across 70 trials for each condition
+% >>> One number per frame (time point) of each condition
+% RMSE ratios:
+% 4) RMSE ratio across trials: for each time point, RMSE of either the
+% dynamic or the crowded dynamic condition was divided by that of the
+% stationary condition.
+% 5) Plotting: ratios of gaze error RMSE was plotted over time 
+
 
 clc;
 clear all;
-%close all;
+close all;
 addpath('/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Gaze_Package/')
 
 %% set up files
-
-mydir = '/Users/fh986/Documents/MATLAB/Tracking_Analyses_Codes/Tracking Parameters Experiment/Final_Experiments/3_Stationary_Dynamic_Flies/aaa_Stationary_Dynamic_Flies_Codes';
+% Get current directory and move one level up
+scriptDir = pwd;
+repoDir = fileparts(scriptDir);
+% add some functions for gaze analysis
+addpath(fullfile(repoDir,'Gaze_Package'));
+% data files for gaze
+mydir = fullfile(repoDir,'data_include_forGaze_20ppl_paired');
       
 [cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
@@ -15,9 +41,8 @@ numSubj = length(cursorFiles);
 
 %% gaze analyses
 
-for subj = 1:numSubj
+for subj = 33
 
-    %opt = detectImportOptions('*_cursor.csv');% if use opts, offset by 1
     easyeyes = readtable([mydir filesep cursorFiles{subj}]);
     mainOutput = readtable([mydir filesep mainFiles{subj}]);
     eyelink = readtable([mydir filesep eyelinkFiles{subj}]);
@@ -54,12 +79,6 @@ for subj = 1:numSubj
     distance = 40; %cm
     [PixelPerDeg,px_to_deg] = convertPxDeg(screenWidthPx,screenWidthCm,distance);
 
-
-
-
-
-    % count peek
-    % timeframe_stimon = 0.15;
     timeframe_starttrack = 0.4; % disregard the first 400 ms of tracking 
     % as the eye might be still looking for the crosshair
     recFrames = 21;
@@ -69,11 +88,13 @@ for subj = 1:numSubj
     if contains(eyelinkFiles{subj}, 'KevinHong061624')
         trials_include = 2:length(stim_on);
     end
-    
 
     for s = trials_include
 
-        % first, focus on the full tracking period and correct for drift
+        %%%%%%%%%%%%%%%%%%%%
+        % Drift correction %
+        %%%%%%%%%%%%%%%%%%%%
+        % focus on the full tracking period and correct for drift
         % amount for correction
         stim_timestamp = easyeyes(stim_on(s),:).posixTimeSec; 
         track_timestamp = easyeyes(track_on(s),:).posixTimeSec;
@@ -85,9 +106,11 @@ for subj = 1:numSubj
 
         framesPerSec = 60;
         eyedrift = calcDrift(currenttrial_ee_track,currenttrial_el_track,PixelPerDeg,framesPerSec);
-        %disp(eyedrift)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % then, analyze gaze      
+        
+        %%%%%%%%%%%%%%%%%%
+        % Gaze positions %
+        %%%%%%%%%%%%%%%%%%
+        % record the x and y positions of gaze 
         trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp - 0.5) & easyeyes.posixTimeSec < (stim_timestamp + 0.5);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
         nearpointPx = str2num(cell2mat(currenttrial_ee_stimon.nearpointXYPx));
@@ -96,7 +119,6 @@ for subj = 1:numSubj
 
         trial_eyelink = eyelink.t1+14400 > (stim_timestamp - 0.5) & eyelink.t1+14400 < (stim_timestamp + 0.5);
         currenttrial_el = eyelink(trial_eyelink,:);
-        
 
         gazePx = [];
         for tt = 1:length(crosshairPx)
@@ -190,15 +212,13 @@ for subj = 1:numSubj
         'Dynamic',cell2mat(dictionary_lineColors({'Dynamic'})))
     plotRMSE(xValues,rmse_ratio_fliesVstationary, ...
         cell2mat(dictionary_lineStyle({'Flies'})), ...
-        'Flies',cell2mat(dictionary_lineColors({'Flies'})))
+        'Crowded dynamic',cell2mat(dictionary_lineColors({'Flies'})))
 
 
+    secondRunBool = rem(subj,2) == 0;
+    legend('Location','northwest'); 
 
-    % secondRunBool = rem(subj,2) == 0;
-    % legend('Location','northwest');
-    
-
-    % title(sprintf('Participant %d Run %d',floor((subj+1)/2),secondRunBool + 1))
+    title(sprintf('Participant %d Run %d',floor((subj+1)/2),secondRunBool + 1))
     hold off;
 
     
@@ -236,7 +256,7 @@ function [] = createPatch(onset,offset)
     y_limits = ylim();
     stimulus_height = [y_limits(1) y_limits(1) y_limits(2) y_limits(2)];
     stimulus_duration = [onset offset offset onset];
-    patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none','HandleVisibility','off')
+    patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.1, 'EdgeColor', 'none','HandleVisibility','off')
 
 end
 
