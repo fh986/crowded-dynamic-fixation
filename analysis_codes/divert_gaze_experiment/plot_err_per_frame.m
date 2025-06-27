@@ -39,45 +39,7 @@ numSubj = length(cursorFiles);
 %% clean up data
 
 % Define the conditions
-all_conditions = [       {['Grav' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    '' ...
-    'Flies_Right8Deg'] }];
+all_conditions = [{'GravFlies_Left1Deg'}];
 
     % {'GravFlies_Left1Deg' }
     % {'GravFlies_Left4Deg' },...
@@ -93,6 +55,9 @@ all_conditions = [       {['Grav' ...
 %%
 
 all_tracking_per_frame = [];
+colors_h_codes = rgb2hex(orderedcolors('gem'));
+
+
 for subj = 1:numSubj 
 
     easyeyes = readtable([mydir filesep cursorFiles{subj}], 'VariableNamingRule','preserve');
@@ -145,7 +110,8 @@ for subj = 1:numSubj
     for block = 1:length(all_conditions)
         this_block = cell2mat(all_conditions(block));
         this_trials_idx = find(strcmp(trialStimInfo.conditionName,this_block));
-
+        trials_per_cond = length(this_trials_idx);
+        figure('Position', [100, 100, 800, 1600]);
         for trial = this_trials_idx'
     
             track_timestamp = easyeyes(track_begin(trial),:).posixTimeSec; 
@@ -162,158 +128,62 @@ for subj = 1:numSubj
 
             % convert to deg
             trial_tracking_error_perFrame_Deg = trial_tracking_error_perFrame_Px .* px_to_deg;
-            disp(size(trial_tracking_error_perFrame_Deg))
+            
+            % plot
+            subplot(trials_per_cond, 1, find(this_trials_idx == trial));
+            xValues = currenttrial_ee.posixTimeSec - currenttrial_ee.posixTimeSec(1) + timeframe;
+            err_line = plot(xValues, trial_tracking_error_perFrame_Deg);
+            err_line.Color = colors_h_codes(1);
+            err_line.LineWidth = 2;
+            err_line.DisplayName = 'Cursor error (deg)';
+            yline(0.15,'--','Color','r','LineWidth',2,'Alpha',0.8,'DisplayName','Hotspot radius')
+
+            legend('Location','northeastoutside')
+            xLimits = xlim;
+            xlim([timeframe, xLimits(2)]);
+            xlabel('Time (sec)')
+            ylim([0 0.4])
+            ylabel(sprintf('Cursor error\n(RMSE deg)'))
+            set(gca,'FontSize',12)
+            
+            % concatenate with other frames in the condition
             all_tracking_per_frame = [all_tracking_per_frame,trial_tracking_error_perFrame_Deg];
 
             
         end
+        sgtitle(sprintf('Subject %d, Condition: %s', subj, ...
+            cell2mat(all_conditions(block))),'FontSize',15)
 
     end
 
-
-
-    % 
-    % % average trials of the same condition & create dictionary
-    % cur_conditions = unique(trialStimInfo.conditionName,'stable'); 
-    % cond_tracking_error_Deg = NaN(length(cur_conditions),1);
-    % cond_trial_tracking_error_Deg = {};
-    % 
-    % for ii = 1:length(cur_conditions)
-    %     idx_cond = find(strcmp(trialStimInfo.conditionName,cur_conditions(ii)));
-    %     this_cond = trial_tracking_error_Deg(idx_cond);
-    % 
-    %     rm = find(this_cond == -1000*px_to_deg);
-    %     this_cond(rm) = [];
-    % 
-    %     this_cond = removeOutliersIQR(this_cond);
-    % 
-    %     cond_tracking_error_Deg(ii) = mean(this_cond); %%median and mean
-    %     cond_trial_tracking_error_Deg{ii} = this_cond;
-    % end
-    % 
-    % cur_dictionary_tracking_Deg = dictionary(cur_conditions,cond_tracking_error_Deg);
-    % cur_map_trial_tracking_Deg = containers.Map(cur_conditions,cond_trial_tracking_error_Deg);
-    % 
-    % all_subj_tracking_Deg{subj} = cur_dictionary_tracking_Deg;
-    % all_subj_trial_tracking_Deg{subj} = cur_map_trial_tracking_Deg;
-
 end
 
-%%
+
+
+%% percentage of frames with large cursor error
 large_error_count = sum(all_tracking_per_frame > 0.15);
 percent_large_err = large_error_count / length(all_tracking_per_frame)
 
+xlimit = [0 0.4];
+% ylimit = [0 2000];
+cond_name = cell2mat(all_conditions(1));
+
 figure;
-hist(all_tracking_per_frame)
-xline(0.15)
-xlim([0 3])
-%%
-% %% average across subjects
-% 
-% dictionary_avg_nTimeouts = dictionary({},[]);
-% dictionary_avg_tracking_Deg = dictionary({},[]);
-% 
-% 
-% for ii = 1:length(all_conditions)
-% 
-%     cur_condName = all_conditions(ii);
-% 
-%     total_timeouts = 0;
-%     total_tracking_error = 0;
-%     subjCount_track = 0;
-% 
-%     for jj = 1:numSubj
-% 
-%         subj_dic_tracking_error = all_subj_tracking_Deg{jj};
-% 
-% 
-%         if isKey(subj_dic_tracking_error,cur_condName)
-%             errorValue = subj_dic_tracking_error(cur_condName);
-% 
-%             if ~isnan(errorValue)
-%                 subjCount_track = subjCount_track + 1;
-%                 total_tracking_error = total_tracking_error + errorValue;
-%             end
-%         end
-% 
-%         dictionary_avg_nTimeouts = insert(dictionary_avg_nTimeouts,cur_condName,total_timeouts/numSubj);
-%         dictionary_avg_tracking_Deg = insert(dictionary_avg_tracking_Deg,cur_condName,total_tracking_error/subjCount_track);
-%     end
-% end
+h = histogram(all_tracking_per_frame);
+h.FaceColor = colors_h_codes(6);
+% h.EdgeColor = [0 0 0];
+h.Annotation.LegendInformation.IconDisplayStyle = 'off'; 
 
-% %% SEM for each mean
-% 
-% % concatenate individual data points
-% map_allTrials_tracking_Deg = containers.Map('KeyType', 'char', 'ValueType', 'any');
-% dictionary_SEM_tracking_Deg = dictionary({},[]);
-% for ii = 1:length(all_conditions)
-% 
-%     cur_condName = all_conditions(ii);
-% 
-%     cur_trials = [];
-% 
-%     for jj = 1:numSubj      
-%         cur_map_trial_tracking_Deg = all_subj_trial_tracking_Deg{jj};
-%         cur_trials = [cur_trials;cur_map_trial_tracking_Deg(cell2mat(cur_condName))];
-%     end
-%     map_allTrials_tracking_Deg(cell2mat(cur_condName)) = cur_trials;
-% 
-% 
-%     % calculate SEM
-%     cur_sem = sem(cur_trials);
-%     dictionary_SEM_tracking_Deg(cur_condName) = cur_sem;
-% 
-% end
-
-
-
-% %% plot 
-% 
-% dot_location_LR = [0,1,2,4,8];
-% NF_condNames = {'NoFlies_noDot','NoFlies_Left1Deg','NoFlies_Right2Deg','NoFlies_Left4Deg','NoFlies_Right8Deg'};
-% F_3_Grav_condNames = {'GravFlies_noDot','GravFlies_Left1Deg','GravFlies_Right2Deg','GravFlies_Left4Deg','GravFlies_Right8Deg'};
-% 
-% for ii = 1:length(dot_location_LR)
-% 
-%     NF_tracking_error_Deg(ii) = dictionary_avg_tracking_Deg(NF_condNames(ii));
-%     F_3_Grav_tracking_error_Deg(ii) = dictionary_avg_tracking_Deg(F_3_Grav_condNames(ii));
-% 
-%     %errorbars
-%     NF_SEM(ii) = dictionary_SEM_tracking_Deg(NF_condNames(ii));
-%     F_3_Grav_SEM(ii) = dictionary_SEM_tracking_Deg(F_3_Grav_condNames(ii));
-% 
-% 
-% end
-% 
-% 
-% 
-% %%
-% dotcolors = {'#7E2F8E','#0072BD','#EDB120','#D95319'};
-% plotPositions = [0,0,0];
-% 
-% 
-% % tracking errors
-% 
-% figure;
-% xlabel('Fixation distance from center (deg)');
-% ylabel('Cursor tracking error (deg)')
-% xlim([0,8.1])
-% ylim([0 0.3]);
-% set(gca,'FontSize',18)
-% hold on;
-% errorbar(dot_location_LR,NF_tracking_error_Deg,NF_SEM,'o-', ...
-%     'LineWidth',2,'Color',cell2mat(dotcolors(4)), ...
-%     'DisplayName','No Flies', 'CapSize',0);
-% errorbar(dot_location_LR + 0.1,F_3_Grav_tracking_error_Deg,F_3_Grav_SEM,'o-', ...
-%     'LineWidth',2,'Color',cell2mat(dotcolors(2)), ...
-%     'DisplayName','3 Flies','CapSize',0);
-% yline(0.15,'k--','LineWidth',2,'DisplayName','Hotspot Radius = 0.15')
-% % legend('Location','North');
-% set(gcf,'Position',[100 100 400 400])
-% hold off;
-% 
-% % title('Effect of Fixation Locations on Tracking Error')
-
+xline(0.15,'--','Color','r','LineWidth',2,'Alpha',0.8,'DisplayName','Hotspot radius')
+xlim(xlimit)
+% ylim(ylimit)
+% xscale('log')
+set(gca,'FontSize',15)
+title(sprintf('Cursor error at each frame, conition: %s', cond_name))
+xlabel('Cursor error (RMSE deg)')
+ylabel('Frequency')
+legend('location','northeast')
+% yticks(min(ylimit):2:max(ylimit))
 %%
 function [sem] = sem(data)
     n = length(data);
