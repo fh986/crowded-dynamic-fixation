@@ -4,7 +4,7 @@
 
 clc;
 clear all;
-close all;
+% close all;
 
 %% set up files
 
@@ -103,40 +103,12 @@ for subj = 1:numSubj
 
     assert(length(stim_on) == length(track_begin));
 
-    % get gaze correction trials
-    fixate_stim = find(diff_trialRout == 1)+2;
-    rm = find(strcmp(easyeyes.trialStep(fixate_stim),'_instructionRoutineEachFrame'));
-    fixate_stim(rm) = [];
-    fixate_stim = fixate_stim(find(strcmp(easyeyes.conditionName(fixate_stim),'fixate')));
-    timeframe = 5;
-    gazeErrors = {};
-    for ii = 1:length(fixate_stim)
-        stim_timestamp = easyeyes(fixate_stim(ii),:).posixTimeSec; 
-        trial_eyelink = eyelink.t1+14400 > (stim_timestamp - timeframe) & eyelink.t1+14400 < (stim_timestamp);
-        currenttrial_el = eyelink(trial_eyelink,:);  
-        gazePx = [];
-        gazePx(:,1) = currenttrial_el.gazeXYPix_1;
-        gazePx(:,2) = - currenttrial_el.gazeXYPix_2;
-
-        rm = find(abs(gazePx(:,1)) > 120); % assuming that larger than 2 deg is not normal error
-        gazePx(rm,:) = [];
-        rm = find(abs(gazePx(:,2)) > 120);
-        gazePx(rm,:) = [];
-
-        avg_error = mean(gazePx);
-        gazeErrors{ii} = avg_error;
-    end
-
-
-
     timeframe = 1.5; 
-     
     trial_tracking_error_Px = [];
 
     for block = 1:length(all_conditions)
         this_block = cell2mat(all_conditions(block));
         this_trials_idx = find(strcmp(trialStimInfo.conditionName,this_block));
-        this_gaze_correction = gazeErrors{block};
 
         for trial = this_trials_idx'
     

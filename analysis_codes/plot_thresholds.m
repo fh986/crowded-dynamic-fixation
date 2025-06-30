@@ -274,12 +274,19 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
     hold on;
     xlim(xlimit)
     ylim(ylimit)
-    xscale('log')
-    set(gca,'FontSize',15)
     title(titletxt)
+    set(gca,'FontSize',15)
+
+    set(gca, 'XScale', 'log');
+    xticks([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, ...
+            0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]);
+    set(gca, 'XMinorTick', 'off');  % since we’re setting everything manually
+
     ylabel('Frequency')
     yticks(min(ylimit):2:max(ylimit))
-    
+    set(gca, 'XMinorTick', 'off', 'YMinorTick', 'off');
+    set(gca, 'TickDir', 'out');
+
     counts1 = histcounts(data1, binEdges);
     counts2 = histcounts(data2, binEdges);
 

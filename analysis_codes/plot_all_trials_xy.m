@@ -26,7 +26,7 @@ numSubj = length(cursorFiles);
 
 
 %% gaze analyses
-
+ignore_blink_bool = true;
 for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
 
     easyeyes = readtable([mydir filesep cursorFiles{subj}],'VariableNamingRule','preserve');
@@ -108,10 +108,15 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
         gazePx = [];
         gazePx(:,1) = currenttrial_el.gazeXYPix_1  - last_crosshairPx(1)- eyedrift(1);
         gazePx(:,2) = -currenttrial_el.gazeXYPix_2  - last_crosshairPx(2)- eyedrift(2); % note the y-flip
-        [newGazePx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
-        if nantrialBool
-            disp('Warning: nantrial')
+        if ignore_blink_bool
+            [newGazePx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
+            if nantrialBool
+                disp('Warning: nantrial')
+            end
+        else
+            newGazePx = gazePx;
         end
+
 
         gazeXDeg = newGazePx(:,1) ./ PixelPerDeg;
         gazeYDeg = newGazePx(:,2) ./ PixelPerDeg;
