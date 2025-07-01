@@ -12,7 +12,7 @@ close all;
 plot_staircase_bool = true;
 eccentricity = 10;
 %% set up files
-% scriptDir = pwd;
+scriptDir = pwd;
 % repoDir = fileparts(scriptDir);
 mydir = pwd;
 d = dir(sprintf('%s/*.csv',mydir));
@@ -115,25 +115,26 @@ end
 
 
 %% determine minimum threshold from Kurzawski et al., 2023, JOV
-% 
-% jov_raw_data = readtable('JoV23Data.csv');
-% 
-% % filter
-% jov_filtered_data = jov_raw_data(strcmp(jov_raw_data.FlankinDirection, 'radial'),:);
-% jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Task, 'crowding'),:);
-% jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Upper'),:);
-% jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Lower'),:);
-% jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Font, 'Sloan'),:);
-% jov_filtered_data = jov_filtered_data((jov_filtered_data.RadialEccentricity == 10),:);
-% 
-% fprintf('Number of thresholds: %d\n', size(jov_filtered_data,1))
-% 
-% jov_filtered_crowding_distance = jov_filtered_data.CrowdingDistance;
-% jov_filtered_eccentricity = jov_filtered_data.RadialEccentricity;
-% 
-% jov_filtered_bouma = jov_filtered_crowding_distance./jov_filtered_eccentricity;
 
-minJOVbouma = 0.096; %round(min(jov_filtered_bouma), 3);
+repoDir = fileparts(mydir);
+jov_raw_data = readtable(sprintf('%s/analysis_codes/JoV23Data.csv',repoDir));
+
+% filter
+jov_filtered_data = jov_raw_data(strcmp(jov_raw_data.FlankinDirection, 'radial'),:);
+jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Task, 'crowding'),:);
+jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Upper'),:);
+jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Lower'),:);
+jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Font, 'Sloan'),:);
+jov_filtered_data = jov_filtered_data((jov_filtered_data.RadialEccentricity == 10),:);
+
+fprintf('Number of thresholds: %d\n', size(jov_filtered_data,1))
+
+jov_filtered_crowding_distance = jov_filtered_data.CrowdingDistance;
+jov_filtered_eccentricity = jov_filtered_data.RadialEccentricity;
+
+jov_filtered_bouma = jov_filtered_crowding_distance./jov_filtered_eccentricity;
+
+minJOVbouma = round(min(jov_filtered_bouma), 3);
 
 fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbouma)
 
