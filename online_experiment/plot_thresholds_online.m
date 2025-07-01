@@ -1,240 +1,146 @@
-% plot_thresholds.m
+% plot_thresholds_.m
 % Author: Helen Hu
-% Last edited: Apr. 9th, 2025
 
-% This script acquires threshold data, average over two sessions for each
-% participant, bootstrap over participants, and plots the group data with
-% error bars being confidence interval from bootstrapping.
+% This script acquires threshold data, one sessions for each
+% participant, and plots a stacked histogram of all thresholds.
 
 
 clc;
 clear all;
 close all;
- 
-%% set up files
-% Get current directory and move one level up
-scriptDir = pwd;
-repoDir = fileparts(scriptDir);
-% add some functions for gaze analysis
-addpath(fullfile(repoDir,'Gaze_Package'));
-% data files for gaze
-mydir = fullfile(repoDir,'data_include_threshold_18ppl_paired');
-   
-[cursorFiles,mainFiles, eyelinkFiles] = getFiles(mydir);
 
-numSubj = length(cursorFiles);
+plot_staircase_bool = true;
+eccentricity = 10;
+%% set up files
+% scriptDir = pwd;
+% repoDir = fileparts(scriptDir);
+mydir = pwd;
+d = dir(sprintf('%s/*.csv',mydir));
+files = {d.name};
+
+for f = 1 :length(files)
+    mainFile = dir(sprintf('%s/%s*.csv',mydir,files{f}(1:3)));
+    mainFiles{f} = mainFile.name;
+end
+
+mainFiles = unique(mainFiles);
+numSubj = length(mainFiles);
+
+
+    
+%% plot staircase
+
+conditions = {'Stationary', 'Dynamic', 'Flies'};
+colors_left = rgb2hex(orderedcolors("gem"));
+colors_right = rgb2hex(orderedcolors("glow"));
+
+if plot_staircase_bool
+
+    for subj = 1:numSubj
+    
+        mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
+    
+        figure;
+        hold on;
+        title(sprintf('Subject %d', subj));
+        set (gca,'FontSize',15);
+        legend('Location','northeast');
+        xlabel('Trials')
+        ylabel('Crowding distance(deg)')
+        ylim([0 15])
+        for cond = 1:length(conditions)
+    
+            condition = conditions{cond};
+            ee_condition = mainOutput(strcmp(mainOutput.blockShuffleGroups1,condition),:);
+    
+            trials_left = ee_condition(contains(ee_condition.conditionName, 'Left'), :);
+            trials_right = ee_condition(contains(ee_condition.conditionName, 'Right'), :);
+    
+            staircase_left = trials_left.questMeanBeforeThisTrialResponse;
+            staircase_right = trials_right.questMeanBeforeThisTrialResponse;
+    
+            plot(10.^staircase_left,'-','Color',colors_left(cond),'LineWidth',2, ...
+                'DisplayName',sprintf('%s, Left', condition))
+            plot(10.^staircase_right,'--','Color',colors_right(cond),'LineWidth',2, ...
+                'DisplayName',sprintf('%s, Right', condition))
+            
+        end
+    
+    end
+
+end
+
 
 %% calculate thresholds
-subj_stationary_left = nan(1,numSubj);
-subj_stationary_right = nan(1,numSubj);
-subj_dynamic_left = nan(1,numSubj);
-subj_dynamic_right = nan(1,numSubj);
-subj_flies_left = nan(1,numSubj);
-subj_flies_right = nan(1,numSubj);
 
-subj_exclude = [];
+crowding_thresholds_left = containers.Map(conditions,{[], [], []});
+crowding_thresholds_right = containers.Map(conditions,{[], [], []});
+
+boumas_left = containers.Map(conditions,{[], [], []});
+boumas_right = containers.Map(conditions,{[], [], []});
+
+% subj_exclude = [];
 
 for subj = 1:numSubj
 
     mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
 
-    block_sequence = unique(mainOutput.blockShuffleGroups1,'stable');
-    rm = cellfun("isempty",block_sequence);
-    block_sequence(rm) = [];
+    for cond = 1:length(conditions)
 
-    thresholds_raw = mainOutput.questMeanAtEndOfTrialsLoop;
-    rm = isnan(thresholds_raw);
-    thresholds_raw(rm) = [];
-    thresholds_raw = 10.^thresholds_raw;
+        condition = conditions{cond};
+        conditionName_right = sprintf('%s_Right', conditions{cond});
+        conditionName_left = sprintf('%s_Left', conditions{cond});
 
-    idx_block_stationary = find(strcmp(block_sequence,'Stationary'));
-    subj_stationary_right(subj) = thresholds_raw(2*idx_block_stationary-1);
-    subj_stationary_left(subj) = thresholds_raw(2*idx_block_stationary);
+        trials_right = mainOutput(strcmp(mainOutput.conditionName,conditionName_right),:);
+        trials_left = mainOutput(strcmp(mainOutput.conditionName,conditionName_left),:);
 
-    idx_block_dynamic = find(strcmp(block_sequence,'Dynamic'));
-    subj_dynamic_right(subj) = thresholds_raw(2*idx_block_dynamic-1);
-    subj_dynamic_left(subj) = thresholds_raw(2*idx_block_dynamic);
+        threshold_left = 10.^trials_left.questMeanAtEndOfTrialsLoop(~isnan(trials_left.questMeanAtEndOfTrialsLoop));
+        threshold_right = 10.^trials_right.questMeanAtEndOfTrialsLoop(~isnan(trials_right.questMeanAtEndOfTrialsLoop));
 
-    idx_block_flies = find(strcmp(block_sequence,'Flies'));
-    subj_flies_right(subj) = thresholds_raw(2*idx_block_flies-1);
-    subj_flies_left(subj) = thresholds_raw(2*idx_block_flies);
+        assert(numel(threshold_left) == 1)
+        assert(numel(threshold_right) == 1)
+
+        bouma_left = threshold_left ./ eccentricity;
+        bouma_right = threshold_right ./ eccentricity;
+
+        crowding_thresholds_left(condition) = [crowding_thresholds_left(condition), threshold_left];
+        crowding_thresholds_right(condition) = [crowding_thresholds_right(condition), threshold_right];
+        boumas_left(condition) = [boumas_left(condition), bouma_left];
+        boumas_right(condition) = [boumas_right(condition), bouma_right];
+
+    end
 
 
 end
-
-%% calculate averages
-firstRun = 1:2:length(subj_stationary_left);
-secondRun = 2:2:length(subj_stationary_left);
-allRuns = 1:length(subj_stationary_left);
-smallThresholds = [1 13 18 26 36];
-
-whichRun = smallThresholds;
-
-avg_stationary_right = geomean(subj_stationary_right(whichRun));
-avg_stationary_left = geomean(subj_stationary_left(whichRun));
-avg_dynamic_right = geomean(subj_dynamic_right(whichRun));
-avg_dynamic_left = geomean(subj_dynamic_left(whichRun));
-avg_flies_right = geomean(subj_flies_right(whichRun));
-avg_flies_left = geomean(subj_flies_left(whichRun));
-
-%% plot
-% 
-CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
-
-conditions = [        {'Stationary Left'},...
-    {'Stationary Right' },...
-    {'Dynamic Left'   },...
-    {'Dynamic Right'    },...
-    {'Crowded Dynamic Left'     },...
-    {'Crowded Dynamic Right'     }];
-
-
-
-%% plot with bootstrapping, bootstrap after averaging across 2 sess for each subj, log thresholds
-subj_stationary_left = subj_stationary_left(~isnan(subj_stationary_left));
-subj_stationary_right = subj_stationary_right(~isnan(subj_stationary_right));subj_dynamic_left = subj_dynamic_left(~isnan(subj_dynamic_left));
-subj_dynamic_right = subj_dynamic_right(~isnan(subj_dynamic_right));
-subj_flies_left = subj_flies_left(~isnan(subj_flies_left));
-subj_flies_right = subj_flies_right(~isnan(subj_flies_right));
-
-subj_avg_stationary_left = avgOverSubj(subj_stationary_left);
-subj_avg_stationary_right = avgOverSubj(subj_stationary_right);
-subj_avg_dynamic_left = avgOverSubj(subj_dynamic_left);
-subj_avg_dynamic_right = avgOverSubj(subj_dynamic_right);
-subj_avg_flies_left = avgOverSubj(subj_flies_left);
-subj_avg_flies_right = avgOverSubj(subj_flies_right);
-
-
-thresholds = {
-    subj_avg_stationary_left,...
-    subj_avg_stationary_right,...
-    subj_avg_dynamic_left, ...
-    subj_avg_dynamic_right, ...
-    subj_avg_flies_left, ...
-    subj_avg_flies_right
-};
-
-% Number of bootstrap samples
-numBootstraps = 10000;
-
-% Confidence level (68%)
-confLevel = 0.68;
-
-% Initialize array to store bootstrap means
-bootstrapMeans = cell(1, length(thresholds));
-
-
-% Perform bootstrapping for each condition using the bootstrap function
-for cond = 1:length(thresholds)
-    data = thresholds{cond};
-
-    % Take the logarithm of the thresholds
-    logData = log(data);
-
-    % Define a function handle to calculate the mean
-    meanFunc = @(data) mean(data);
-
-    % Generate bootstrap samples and calculate means
-    bootMeans = bootstrp(numBootstraps, meanFunc, logData);
-
-    bootstrapMeans{cond} = bootMeans;
-end
-
-% Calculate the 68% confidence intervals
-confIntervals = zeros(length(thresholds), 2);
-meanLogThresholds = zeros(1, length(thresholds));
-for cond = 1:length(thresholds)
-    sortedMeans = sort(bootstrapMeans{cond});
-    lowerBound = sortedMeans(round((1 - confLevel) / 2 * numBootstraps));
-    upperBound = sortedMeans(round((1 + confLevel) / 2 * numBootstraps));
-    confIntervals(cond, :) = [lowerBound, upperBound];
-    meanLogThresholds(cond) = mean(log(thresholds{cond})); % Mean of log-transformed data
-end
-
-% Convert mean thresholds and error bars back from log scale
-meanThresholds = exp(meanLogThresholds);
-lowerError = meanThresholds - exp(confIntervals(:, 1)');
-upperError = exp(confIntervals(:, 2)') - meanThresholds;
-errorBars = [lowerError; upperError];
-
-
-%%
-% Define jitter amount
-jitterAmount = 0.05; 
-jitter = (rand(1,3) - 0.5) * jitterAmount * 2; 
-
-xPositions = [1, 2];
-
-figure;
-hold on;
-numGroups = 3;
-
-for ii = 1:numGroups
-    idx1 = (ii - 1) * 2 + 1;
-    idx2 = idx1 + 1;
-    
-    xJittered = xPositions + jitter(ii);
-
-    plot(xJittered, [meanThresholds(idx1), meanThresholds(idx2)], 'o-', ...
-        'Color', CData{ii}, 'LineWidth', 3, 'MarkerSize', 9);
-    errorbar(xJittered(1), meanThresholds(idx1), lowerError(idx1), upperError(idx1), ...
-        'LineStyle', 'none', 'Color', CData{ii}, 'LineWidth', 2, 'CapSize', 0);
-    errorbar(xJittered(2), meanThresholds(idx2), lowerError(idx2), upperError(idx2), ...
-        'LineStyle', 'none', 'Color', CData{ii}, 'LineWidth', 2, 'CapSize', 0);
-end
-
-set(gca, 'YScale', 'log');
-set(gca, 'FontSize', 18);
-set(gca, 'XTick', [1 2], 'XTickLabel', {'Left', 'Right'});
-
-xlim([0 3]); 
-ylim([1, 6]);
-
-% Labels
-ylabel('Crowding thresholds (deg)');
-
-hold off;
-
 
 
 %% determine minimum threshold from Kurzawski et al., 2023, JOV
+% 
+% jov_raw_data = readtable('JoV23Data.csv');
+% 
+% % filter
+% jov_filtered_data = jov_raw_data(strcmp(jov_raw_data.FlankinDirection, 'radial'),:);
+% jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Task, 'crowding'),:);
+% jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Upper'),:);
+% jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Lower'),:);
+% jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Font, 'Sloan'),:);
+% jov_filtered_data = jov_filtered_data((jov_filtered_data.RadialEccentricity == 10),:);
+% 
+% fprintf('Number of thresholds: %d\n', size(jov_filtered_data,1))
+% 
+% jov_filtered_crowding_distance = jov_filtered_data.CrowdingDistance;
+% jov_filtered_eccentricity = jov_filtered_data.RadialEccentricity;
+% 
+% jov_filtered_bouma = jov_filtered_crowding_distance./jov_filtered_eccentricity;
 
-jov_raw_data = readtable('JoV23Data.csv');
-
-% filter
-jov_filtered_data = jov_raw_data(strcmp(jov_raw_data.FlankinDirection, 'radial'),:);
-jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Task, 'crowding'),:);
-jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Upper'),:);
-jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Lower'),:);
-jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Font, 'Sloan'),:);
-jov_filtered_data = jov_filtered_data((jov_filtered_data.RadialEccentricity == 10),:);
-
-fprintf('Number of thresholds: %d\n', size(jov_filtered_data,1))
-
-jov_filtered_crowding_distance = jov_filtered_data.CrowdingDistance;
-jov_filtered_eccentricity = jov_filtered_data.RadialEccentricity;
-
-jov_filtered_bouma = jov_filtered_crowding_distance./jov_filtered_eccentricity;
-
-minJOVbouma = round(min(jov_filtered_bouma), 3);
+minJOVbouma = 0.096; %round(min(jov_filtered_bouma), 3);
 
 fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbouma)
 
 %% plot histograms for Bouma factors
-
-subj_stationary_leftB = subj_stationary_left./10;
-subj_stationary_rightB = subj_stationary_right./10;
-subj_dynamic_leftB = subj_dynamic_left./10;
-subj_dynamic_rightB = subj_dynamic_right./10;
-subj_flies_leftB = subj_flies_left./10;
-subj_flies_rightB = subj_flies_right./10;
-
-%%
-CData2 = { ...
-    [0.5600, 0.1600, 0.6000], ...  % Purple variation
-    [0.8700, 0.3700, 0.1300], ...  % Orange variation
-    [0, 0.5000, 0.8000] ...        % Blue variation
-};
+ 
+CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
+CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
 
 ylimit = [0 10];
 % bwidth = 0.1;
@@ -253,17 +159,17 @@ binEdges = binEdges - offset;
 
 figure;
 subplot(3,1,1)
-plotStackedHist(subj_stationary_rightB,subj_stationary_leftB,binEdges,xlimit,ylimit, ...
+plotStackedHist(boumas_right('Stationary'),boumas_left('Stationary'),binEdges,xlimit,ylimit, ...
     'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
 
 
 subplot(3,1,2)
-plotStackedHist(subj_dynamic_rightB,subj_dynamic_leftB,binEdges,xlimit,ylimit, ...
+plotStackedHist(boumas_right('Dynamic'),boumas_left('Dynamic'),binEdges,xlimit,ylimit, ...
     'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
 
 
 subplot(3,1,3)
-plotStackedHist(subj_flies_rightB,subj_flies_leftB,binEdges,xlimit,ylimit, ...
+plotStackedHist(boumas_right('Flies'),boumas_left('Flies'),binEdges,xlimit,ylimit, ...
     'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
 xlabel('Bouma factor b')
 
@@ -307,14 +213,3 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
 
 end
 
-
-function [subj_avg_threshold] = avgOverSubj(session_threshold)
-
-    numSubj = length(session_threshold)/2;
-    subj_avg_threshold = NaN(1,numSubj);
-    for ii = 1:numSubj
-        sess1_threshold = session_threshold(ii*2-1);
-        sess2_threshold = session_threshold(ii*2);
-        subj_avg_threshold(ii) = mean([sess1_threshold,sess2_threshold]);
-    end
-end
