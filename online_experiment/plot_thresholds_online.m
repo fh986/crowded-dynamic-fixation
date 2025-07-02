@@ -14,7 +14,7 @@ eccentricity = 10;
 %% set up files
 scriptDir = pwd;
 % repoDir = fileparts(scriptDir);
-mydir = pwd;
+mydir = [scriptDir '/online_data'];
 d = dir(sprintf('%s/*.csv',mydir));
 files = {d.name};
 
@@ -38,7 +38,7 @@ if plot_staircase_bool
 
     for subj = 1:numSubj
     
-        mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
+        mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule', 'preserve');
     
         figure;
         hold on;
@@ -116,7 +116,7 @@ end
 
 %% determine minimum threshold from Kurzawski et al., 2023, JOV
 
-repoDir = fileparts(mydir);
+repoDir = fileparts(scriptDir);
 jov_raw_data = readtable(sprintf('%s/analysis_codes/JoV23Data.csv',repoDir));
 
 % filter
