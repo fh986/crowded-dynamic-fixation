@@ -9,7 +9,7 @@ clc;
 clear all;
 close all;
 
-plot_staircase_bool = true;
+plot_staircase_bool = true;%true;
 eccentricity = 10;
 %% set up files
 scriptDir = pwd;
@@ -19,7 +19,7 @@ d = dir(sprintf('%s/*.csv',mydir));
 files = {d.name};
 
 for f = 1 :length(files)
-    mainFile = dir(sprintf('%s/%s*.csv',mydir,files{f}(1:3)));
+    mainFile = dir(sprintf('%s/%s*.csv',mydir,files{f}(1:15)));
     mainFiles{f} = mainFile.name;
 end
 
@@ -138,12 +138,17 @@ minJOVbouma = round(min(jov_filtered_bouma), 3);
 
 fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbouma)
 
+%% debug
+
+sum_abnormal_thresholds = sum(boumas_right('Stationary') - 0.499999999613144 < 0.0001)
+
+
 %% plot histograms for Bouma factors
  
 CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
 CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
 
-ylimit = [0 10];
+ylimit = [0 50];
 % bwidth = 0.1;
 xlimit = [0.03 1];
 
