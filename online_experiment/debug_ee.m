@@ -73,90 +73,120 @@ results_good = results(~ismember(results.Subject, bad_subjects), :);
 
 
 %% plot histograms for Bouma factors
- 
-CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
-CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
-
-results_for_plotting = results_good;
-table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
-table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
-table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
-
-minJOVbouma = 0.096;
-
-ylimit = [0 12];
-% bwidth = 0.1;
-xlimit = [0.03 1];
-
-minData = 0.05;
-maxData = 1;
-numBins = 35; 
-binEdges = logspace(log10(minData), log10(maxData), numBins);
-binWidths = diff(binEdges);
-
-% make sure of that minJOVdata is included as a bin edge
-[~, index] = min(abs(binEdges - minJOVbouma));
-offset = binEdges(index) - minJOVbouma;
-binEdges = binEdges - offset;
-
-figure;
-subplot(3,1,1)
-plotStackedHist(table_stationary.BoumaRight,table_stationary.BoumaLeft,binEdges,xlimit,ylimit, ...
-    'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
-
-
-subplot(3,1,2)
-plotStackedHist(table_dynamic.BoumaRight,table_dynamic.BoumaLeft,binEdges,xlimit,ylimit, ...
-    'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
-
-
-subplot(3,1,3)
-plotStackedHist(table_flies.BoumaRight,table_flies.BoumaLeft,binEdges,xlimit,ylimit, ...
-    'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
-xlabel('Bouma factor b')
-
-sgtitle(sprintf('Number of subjects: %d', height(table_flies)))
+% 
+% CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
+% CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
+% 
+% results_for_plotting = results_good;
+% table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
+% table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
+% table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
+% 
+% minJOVbouma = 0.096;
+% 
+% ylimit = [0 12];
+% % bwidth = 0.1;
+% xlimit = [0.03 1];
+% 
+% minData = 0.05;
+% maxData = 1;
+% numBins = 35; 
+% binEdges = logspace(log10(minData), log10(maxData), numBins);
+% binWidths = diff(binEdges);
+% 
+% % make sure of that minJOVdata is included as a bin edge
+% [~, index] = min(abs(binEdges - minJOVbouma));
+% offset = binEdges(index) - minJOVbouma;
+% binEdges = binEdges - offset;
+% 
+% figure;
+% subplot(3,1,1)
+% plotStackedHist(table_stationary.BoumaRight,table_stationary.BoumaLeft,binEdges,xlimit,ylimit, ...
+%     'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
+% 
+% 
+% subplot(3,1,2)
+% plotStackedHist(table_dynamic.BoumaRight,table_dynamic.BoumaLeft,binEdges,xlimit,ylimit, ...
+%     'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
+% 
+% 
+% subplot(3,1,3)
+% plotStackedHist(table_flies.BoumaRight,table_flies.BoumaLeft,binEdges,xlimit,ylimit, ...
+%     'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
+% xlabel('Bouma factor b')
+% 
+% sgtitle(sprintf('Number of subjects: %d', height(table_flies)))
 
 %% plot staircase
+% 
+% colors_left = rgb2hex(orderedcolors("gem"));
+% colors_right = rgb2hex(orderedcolors("glow"));
+% 
+% if plot_staircase_bool
+% 
+%     for subj = 61 %1:numSubj
+% 
+%         mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule', 'preserve');
+% 
+%         figure;
+%         hold on;
+%         title(sprintf('Subject %d', subj));
+%         set (gca,'FontSize',15);
+%         legend('Location','northeast');
+%         xlabel('Trials')
+%         ylabel('Crowding distance(deg)')
+%         ylim([0 15])
+%         for cond = 1:length(conditions)
+% 
+%             condition = conditions{cond};
+%             ee_condition = mainOutput(strcmp(mainOutput.blockShuffleGroups1,condition),:);
+% 
+%             trials_left = ee_condition(contains(ee_condition.conditionName, 'Left'), :);
+%             trials_right = ee_condition(contains(ee_condition.conditionName, 'Right'), :);
+% 
+%             staircase_left = trials_left.questMeanBeforeThisTrialResponse;
+%             staircase_right = trials_right.questMeanBeforeThisTrialResponse;
+% 
+%             plot(10.^staircase_left,'-','Color',colors_left(cond),'LineWidth',2, ...
+%                 'DisplayName',sprintf('%s, Left', condition))
+%             plot(10.^staircase_right,'--','Color',colors_right(cond),'LineWidth',2, ...
+%                 'DisplayName',sprintf('%s, Right', condition))
+% 
+%         end
+% 
+%     end
+% 
+% end
 
-colors_left = rgb2hex(orderedcolors("gem"));
-colors_right = rgb2hex(orderedcolors("glow"));
 
-if plot_staircase_bool
+%% Print all the warning messages.
 
-    for subj = 61 %1:numSubj
+fileID = fopen('warning_summary.txt', 'w');
+for ii = 1:length(bad_subjects)
+
+    subj = bad_subjects(ii);
+
+    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+    fprintf(fileID, '------------- Subject %d ------------\n', subj);
     
-        mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule', 'preserve');
+    if ismember('warning', mainOutput.Properties.VariableNames)
+        all_warning = mainOutput.warning;
+        all_warning = all_warning(~cellfun(@isempty, all_warning)); 
     
-        figure;
-        hold on;
-        title(sprintf('Subject %d', subj));
-        set (gca,'FontSize',15);
-        legend('Location','northeast');
-        xlabel('Trials')
-        ylabel('Crowding distance(deg)')
-        ylim([0 15])
-        for cond = 1:length(conditions)
+        prefixes = cellfun(@(s) s(1:min(30,end)), all_warning, 'UniformOutput', false); 
+        [unique_prefixes, ~, group_idx] = unique(prefixes);  
     
-            condition = conditions{cond};
-            ee_condition = mainOutput(strcmp(mainOutput.blockShuffleGroups1,condition),:);
-    
-            trials_left = ee_condition(contains(ee_condition.conditionName, 'Left'), :);
-            trials_right = ee_condition(contains(ee_condition.conditionName, 'Right'), :);
-    
-            staircase_left = trials_left.questMeanBeforeThisTrialResponse
-            staircase_right = trials_right.questMeanBeforeThisTrialResponse
-    
-            plot(10.^staircase_left,'-','Color',colors_left(cond),'LineWidth',2, ...
-                'DisplayName',sprintf('%s, Left', condition))
-            plot(10.^staircase_right,'--','Color',colors_right(cond),'LineWidth',2, ...
-                'DisplayName',sprintf('%s, Right', condition))
-            
+        for i = 1:length(unique_prefixes)
+            example_idx = find(group_idx == i, 1); 
+            fprintf(fileID, 'Prefix: %s\nExample: %s\n\n', unique_prefixes{i}, all_warning{example_idx});
         end
-    
+    else
+        fprintf(fileID, 'Warning is not a column in this file.\n\n');
     end
 
 end
+
+fclose(fileID);
 
 %%
 function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1,minJOVbouma)
