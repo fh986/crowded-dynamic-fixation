@@ -91,42 +91,47 @@ for subj = 1:numSubj
         threshold_left = 10.^trials_left.questMeanAtEndOfTrialsLoop(~isnan(trials_left.questMeanAtEndOfTrialsLoop));
         threshold_right = 10.^trials_right.questMeanAtEndOfTrialsLoop(~isnan(trials_right.questMeanAtEndOfTrialsLoop));
 
-        assert(numel(threshold_left) == 1)
-        assert(numel(threshold_right) == 1)
+        if numel(threshold_left) == 1 && numel(threshold_right) == 1
+    
+            bouma_left = threshold_left ./ eccentricity;
+            bouma_right = threshold_right ./ eccentricity;
+    
+            % get measurements for filtering
+            % 1. questSD
+            questSD_right = trials_right.questSDAtEndOfTrialsLoop(~isnan(trials_right.questSDAtEndOfTrialsLoop));
+            questSD_left = trials_left.questSDAtEndOfTrialsLoop(~isnan(trials_left.questSDAtEndOfTrialsLoop));
+            assert(numel(questSD_right) == 1)
+            assert(numel(questSD_left) == 1)
+            % 2. trialGivenToQuest
+            % Check if 'trialGivenToQuest' exists in the table
+            if ismember('trialGivenToQuest', trials_right.Properties.VariableNames)
+                trialGivenToQuest_right = trials_right.trialGivenToQuest;
+                numTrials_right = sum(strcmp(trialGivenToQuest_right, 'TRUE'));
+            else
+                numTrials_right = 0;
+            end
+            
+            if ismember('trialGivenToQuest', trials_left.Properties.VariableNames)
+                trialGivenToQuest_left = trials_left.trialGivenToQuest;
+                numTrials_left = sum(strcmp(trialGivenToQuest_left, 'TRUE'));
+            else
+                numTrials_left = 0;
+            end
+    
+            % Add a row to the results table
+            results(row,:) = table(subj, {condition}, bouma_left, bouma_right, threshold_left, threshold_right, ...
+                                   questSD_left, questSD_right, numTrials_left, numTrials_right, ...
+                                   'VariableNames', {'Subject', 'Condition', 'BoumaLeft', 'BoumaRight', 'ThresholdLeft', 'ThresholdRight', ...
+                                   'questSD_left', 'questSD_right', 'numTrials_left', 'numTrials_right'});
+    
+            row = row + 1;
 
-        bouma_left = threshold_left ./ eccentricity;
-        bouma_right = threshold_right ./ eccentricity;
-
-        % get measurements for filtering
-        % 1. questSD
-        questSD_right = trials_right.questSDAtEndOfTrialsLoop(~isnan(trials_right.questSDAtEndOfTrialsLoop));
-        questSD_left = trials_left.questSDAtEndOfTrialsLoop(~isnan(trials_left.questSDAtEndOfTrialsLoop));
-        assert(numel(questSD_right) == 1)
-        assert(numel(questSD_left) == 1)
-        % 2. trialGivenToQuest
-        % Check if 'trialGivenToQuest' exists in the table
-        if ismember('trialGivenToQuest', trials_right.Properties.VariableNames)
-            trialGivenToQuest_right = trials_right.trialGivenToQuest;
-            numTrials_right = sum(strcmp(trialGivenToQuest_right, 'TRUE'));
         else
-            numTrials_right = 0;
+
+            disp('Warning: no thresholds.')
+            disp(mainFiles{subj})
+
         end
-        
-        if ismember('trialGivenToQuest', trials_left.Properties.VariableNames)
-            trialGivenToQuest_left = trials_left.trialGivenToQuest;
-            numTrials_left = sum(strcmp(trialGivenToQuest_left, 'TRUE'));
-        else
-            numTrials_left = 0;
-        end
-
-        % Add a row to the results table
-        results(row,:) = table(subj, {condition}, bouma_left, bouma_right, threshold_left, threshold_right, ...
-                               questSD_left, questSD_right, numTrials_left, numTrials_right, ...
-                               'VariableNames', {'Subject', 'Condition', 'BoumaLeft', 'BoumaRight', 'ThresholdLeft', 'ThresholdRight', ...
-                               'questSD_left', 'questSD_right', 'numTrials_left', 'numTrials_right'});
-
-        row = row + 1;
-
     end
 end
 
