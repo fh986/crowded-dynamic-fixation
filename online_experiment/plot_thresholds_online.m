@@ -31,8 +31,8 @@ numSubj = length(mainFiles);
 %% plot staircase
 
 conditions = {'Stationary', 'Dynamic', 'Flies'};
-colors_left = rgb2hex(orderedcolors("gem"));
-colors_right = rgb2hex(orderedcolors("glow"));
+% colors_left = rgb2hex(orderedcolors("gem"));
+% colors_right = rgb2hex(orderedcolors("glow"));
 
 if plot_staircase_bool
 
