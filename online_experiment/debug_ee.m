@@ -27,60 +27,154 @@ numSubj = length(mainFiles);
 %% extract thresholds
 results = table();  
 row = 1;  
+
 for subj = 1:numSubj
 
     mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+    date = extractBefore(mainOutput.date{1}, '_');
+    screenWidthCm = unique(mainOutput.screenWidthByObjectCm(~isnan(mainOutput.screenWidthByObjectCm)));
+    assert(length(screenWidthCm) == 1, 'Incorrect screen width input')
+
+    deviceSystemFamily = unique(mainOutput.deviceSystemFamily(cellfun(@(x) ~isempty(x), mainOutput.deviceSystemFamily)));
+    assert(length(deviceSystemFamily) == 1, 'Incorrect device system input')
+
 
     for cond = 1:length(conditions)
 
         condition = conditions{cond};
-        conditionName_right = sprintf('%s_Right', condition);
-        conditionName_left = sprintf('%s_Left', condition);
 
-        trials_right = mainOutput(strcmp(mainOutput.conditionName, conditionName_right), :);
-        trials_left = mainOutput(strcmp(mainOutput.conditionName, conditionName_left), :);
+        for hemi = ["Left", "Right"]  % loop over meridian
 
-        threshold_left = 10.^trials_left.questMeanAtEndOfTrialsLoop(~isnan(trials_left.questMeanAtEndOfTrialsLoop));
-        threshold_right = 10.^trials_right.questMeanAtEndOfTrialsLoop(~isnan(trials_right.questMeanAtEndOfTrialsLoop));
+            meridian = lower(hemi);  % 'left' or 'right'
+            conditionName = sprintf('%s_%s', condition, hemi);
 
-        assert(numel(threshold_left) == 1)
-        assert(numel(threshold_right) == 1)
+            % Extract trials for this condition and meridian
+            trials = mainOutput(strcmp(mainOutput.conditionName, conditionName), :);
 
-        bouma_left = threshold_left ./ eccentricity;
-        bouma_right = threshold_right ./ eccentricity;
+            % Extract threshold and bouma
+            threshold_vals = 10.^trials.questMeanAtEndOfTrialsLoop(~isnan(trials.questMeanAtEndOfTrialsLoop));
+            assert(numel(threshold_vals) == 1, sprintf('file name: %s', mainFiles{subj}));
 
-        % Add a row to the results table
-        results(row,:) = table(subj, {condition}, bouma_left, bouma_right, threshold_left, threshold_right, ...
-                               'VariableNames', {'Subject', 'Condition', 'BoumaLeft', 'BoumaRight', 'ThresholdLeft', 'ThresholdRight'});
+            threshold = threshold_vals;
+            bouma = threshold / eccentricity;
 
-        row = row + 1;
+            % check for bug
+            goodThreshold_bool = ~abs(threshold - 4.99999999613144) < eps;
 
+            % Add row to results
+            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, threshold, bouma, goodThreshold_bool, ...
+                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', 'Threshold', 'Bouma', 'GoodThreshold_bool'});
+
+            row = row + 1;
+
+        end
     end
 end
 
 
-%% debug
 
-% Find subjects who had at least one threshold == 5
-bad_subjects = unique(results.Subject(abs(results.ThresholdLeft - 4.99999999613144) < eps | abs(results.ThresholdRight - 4.99999999613144) < eps));
+%% filtering
 
-% Table of all rows from bad subjects
-results_bad = results(ismember(results.Subject, bad_subjects), :);
-fprintf('There are %d bad subjects. \n', length(bad_subjects))
+results.Date = datetime(results.Date, 'InputFormat', 'yyyy-MM-dd');
+results = sortrows(results, 'Date');
+results = sortrows(results, 'ScreenWidth');
 
-% Table of all rows from good subjects
-results_good = results(~ismember(results.Subject, bad_subjects), :);
+fprintf('Total number of thresholds: %d\n', size(results, 1))
+fprintf('Number of bad thresholds: %d\n', size(results, 1) - sum(results.GoodThreshold_bool))
+
+badThresholds = results(results.GoodThreshold_bool == 0, :);
+fprintf('Number of bad subjects: %d\n', length(unique(badThresholds.Subject)))
+
+goodThresholds = results(results.GoodThreshold_bool == 1, :);
+rowCounts = groupcounts(goodThresholds, 'Subject');
+completeSubjects = rowCounts.Subject(rowCounts.GroupCount == 6);
+goodSubjects = goodThresholds(ismember(goodThresholds.Subject, completeSubjects), :);
 
 
+%% plot screen width
+
+% Step 1: Get unique screen widths per subject
+T_unique = unique(results(:, {'Subject', 'ScreenWidth'}));
+
+% Step 2: Split into complete and incomplete subjects
+isComplete = ismember(T_unique.Subject, completeSubjects);
+screenWidth_complete = T_unique.ScreenWidth(isComplete);
+screenWidth_incomplete = T_unique.ScreenWidth(~isComplete);
+
+% Step 3: Define bins (adjust bin edges as needed)
+binEdges = floor(min(T_unique.ScreenWidth)) : ceil(max(T_unique.ScreenWidth));
+
+% Step 4: Compute histogram counts
+[count_complete, ~] = histcounts(screenWidth_complete, binEdges);
+[count_incomplete, ~] = histcounts(screenWidth_incomplete, binEdges);
+
+% Step 5: Plot stacked histogram using bar
+binCenters = binEdges(1:end-1) + diff(binEdges)/2;
+
+figure;
+b = bar(binCenters, [count_complete; count_incomplete]', 'stacked');
+for i = 1:numel(b)
+    b(i).BarWidth = 1;
+end
+darkRed = [0.85 0.33 0.1];
+lightBlue = [0.7 0.85 1.0];   
+b(1).FaceColor = lightBlue;   % for complete subjects
+b(2).FaceColor = darkRed;    % for incomplete subjects
+xlabel('Screen width (cm)', 'FontSize', 15)
+ylabel('Number of subjects', 'FontSize', 15)
+xlim([0 80])
+ylim([0 20])
+title('Screen Widths (N = 70)', 'FontSize', 20)
+legend({'Complete dataset', 'Incomplete dataset'}, 'FontSize', 15)
+set(gca, 'FontSize', 15)
+box off
+ax = gca;  
+ax.TickDir = 'out';
+
+%% what happened to people with big enough screens and bad thresholds
+
+% subjects with small screens
+subjects_below_22_3 = unique(results.Subject(results.ScreenWidth < 22.3));
+num_below_22_3 = numel(subjects_below_22_3);
+fprintf('Number of subjects with screen widths below 22.3: %d\n', num_below_22_3)
+
+
+
+results_filtered = results( ...
+    results.GoodThreshold_bool == 0 & results.ScreenWidth >= 22.3, :);
+
+subj_filtered = unique(results_filtered.Subject);
+
+
+for ii = 1:length(subj_filtered)
+
+    subj = subj_filtered(ii);
+    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+
+    fprintf('------ Subj %d ------\n', subj)
+    disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
+    
+end
+    
+    
+    
 %% plot histograms for Bouma factors
 % 
 % CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
 % CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
 % 
-% results_for_plotting = results_good;
-% table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
-% table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
-% table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
+% results_for_plotting = goodSubjects;
+% 
+% 
+% conditions = ["Stationary", "Dynamic", "Flies"];
+% meridians = ["left", "right"];
+% 
+% for c = conditions
+%     for m = meridians
+%         varName = sprintf('bouma_%s_%s', lower(c), m);  % e.g., 'bouma_stationary_left'
+%         resultsStruct.(varName) = filter_bouma(results_for_plotting, c, m);
+%     end
+% end
 % 
 % minJOVbouma = 0.096;
 % 
@@ -100,22 +194,25 @@ results_good = results(~ismember(results.Subject, bad_subjects), :);
 % binEdges = binEdges - offset;
 % 
 % figure;
-% subplot(3,1,1)
-% plotStackedHist(table_stationary.BoumaRight,table_stationary.BoumaLeft,binEdges,xlimit,ylimit, ...
-%     'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
 % 
+% titles = {'Stationary fixation', 'Dynamic fixation', 'Crowded dynamic fixation'};
 % 
-% subplot(3,1,2)
-% plotStackedHist(table_dynamic.BoumaRight,table_dynamic.BoumaLeft,binEdges,xlimit,ylimit, ...
-%     'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
+% conditions = ["stationary", "dynamic", "flies"];
 % 
+% for i = 1:3
+%     cond = conditions(i);
 % 
-% subplot(3,1,3)
-% plotStackedHist(table_flies.BoumaRight,table_flies.BoumaLeft,binEdges,xlimit,ylimit, ...
-%     'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
+%     left_data = resultsStruct.(sprintf('bouma_%s_left', cond));
+%     right_data = resultsStruct.(sprintf('bouma_%s_right', cond));
+% 
+%     subplot(3,1,i)
+%     plotStackedHist(left_data, right_data, ...
+%         binEdges, xlimit, ylimit, ...
+%         titles{i}, cell2mat(CData(i)), minJOVbouma)
+% end
+% 
 % xlabel('Bouma factor b')
-% 
-% sgtitle(sprintf('Number of subjects: %d', height(table_flies)))
+% sgtitle(sprintf('Number of subjects: %d', length(resultsStruct.bouma_dynamic_right)))
 
 %% plot staircase
 % 
@@ -124,7 +221,7 @@ results_good = results(~ismember(results.Subject, bad_subjects), :);
 % 
 % if plot_staircase_bool
 % 
-%     for subj = 61 %1:numSubj
+%     for subj = 42 %1:numSubj
 % 
 %         mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule', 'preserve');
 % 
@@ -160,33 +257,33 @@ results_good = results(~ismember(results.Subject, bad_subjects), :);
 
 
 %% Print all the warning messages.
-
-fileID = fopen('warning_summary.txt', 'w');
-for ii = 1:length(bad_subjects)
-
-    subj = bad_subjects(ii);
-
-    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
-    fprintf(fileID, '------------- Subject %d ------------\n', subj);
-    
-    if ismember('warning', mainOutput.Properties.VariableNames)
-        all_warning = mainOutput.warning;
-        all_warning = all_warning(~cellfun(@isempty, all_warning)); 
-    
-        prefixes = cellfun(@(s) s(1:min(30,end)), all_warning, 'UniformOutput', false); 
-        [unique_prefixes, ~, group_idx] = unique(prefixes);  
-    
-        for i = 1:length(unique_prefixes)
-            example_idx = find(group_idx == i, 1); 
-            fprintf(fileID, 'Prefix: %s\nExample: %s\n\n', unique_prefixes{i}, all_warning{example_idx});
-        end
-    else
-        fprintf(fileID, 'Warning is not a column in this file.\n\n');
-    end
-
-end
-
-fclose(fileID);
+% 
+% fileID = fopen('warning_summary.txt', 'w');
+% for ii = 1:length(bad_subjects)
+% 
+%     subj = bad_subjects(ii);
+% 
+%     mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+%     fprintf(fileID, '------------- Subject %d ------------\n', subj);
+% 
+%     if ismember('warning', mainOutput.Properties.VariableNames)
+%         all_warning = mainOutput.warning;
+%         all_warning = all_warning(~cellfun(@isempty, all_warning)); 
+% 
+%         prefixes = cellfun(@(s) s(1:min(30,end)), all_warning, 'UniformOutput', false); 
+%         [unique_prefixes, ~, group_idx] = unique(prefixes);  
+% 
+%         for i = 1:length(unique_prefixes)
+%             example_idx = find(group_idx == i, 1); 
+%             fprintf(fileID, 'Prefix: %s\nExample: %s\n\n', unique_prefixes{i}, all_warning{example_idx});
+%         end
+%     else
+%         fprintf(fileID, 'Warning is not a column in this file.\n\n');
+%     end
+% 
+% end
+% 
+% fclose(fileID);
 
 %%
 function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1,minJOVbouma)
@@ -224,6 +321,16 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
 
     end
     xline(minJOVbouma,'r--','LineWidth',2);
+
+end
+
+function [filtered_results] = filter_bouma(table, conditionName, meridianName)
+% filters results based on condition and meridian
+% conditionName and meridianName inputs must be strings
+
+    filtered_results = table.Bouma( ...
+        table.Condition == conditionName & ...
+        cellfun(@(x) x(1) == meridianName, table.Meridian));
 
 end
 
