@@ -38,6 +38,10 @@ for subj = 1:numSubj
     deviceSystemFamily = unique(mainOutput.deviceSystemFamily(cellfun(@(x) ~isempty(x), mainOutput.deviceSystemFamily)));
     assert(length(deviceSystemFamily) == 1, 'Incorrect device system input')
 
+    distanceByBlindspotCm = unique(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)));
+    maxDistanceByBlindspotCm = max(distanceByBlindspotCm);
+    assert(length(maxDistanceByBlindspotCm) == 1, 'Incorrect distance by blindspot input')
+
 
     for cond = 1:length(conditions)
 
@@ -54,6 +58,7 @@ for subj = 1:numSubj
             % Extract threshold and bouma
             threshold_vals = 10.^trials.questMeanAtEndOfTrialsLoop(~isnan(trials.questMeanAtEndOfTrialsLoop));
             assert(numel(threshold_vals) == 1, sprintf('file name: %s', mainFiles{subj}));
+            
 
             threshold = threshold_vals;
             bouma = threshold / eccentricity;
@@ -62,8 +67,8 @@ for subj = 1:numSubj
             goodThreshold_bool = ~abs(threshold - 4.99999999613144) < eps;
 
             % Add row to results
-            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, threshold, bouma, goodThreshold_bool, ...
-                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', 'Threshold', 'Bouma', 'GoodThreshold_bool'});
+            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, maxDistanceByBlindspotCm, threshold, bouma, goodThreshold_bool, ...
+                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', 'distanceByBlindspot', 'Threshold', 'Bouma', 'GoodThreshold_bool'});
 
             row = row + 1;
 
@@ -71,6 +76,8 @@ for subj = 1:numSubj
     end
 end
 
+%%
+writetable(results, 'online_tracking_debug.csv')
 
 
 %% filtering
@@ -156,7 +163,21 @@ for ii = 1:length(subj_filtered)
     
 end
     
+%%
+
+for ii = 42
+
+    subj = ii;
+    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+    disp(mainFiles{subj})
+
+    prolificID = unique(mainOutput.ProlificParticipantID);
+    disp(prolificID)
+
+    fprintf('------ Subj %d ------\n', subj)
+    disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
     
+end
     
 %% plot histograms for Bouma factors
 % 

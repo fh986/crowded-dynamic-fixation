@@ -4,7 +4,6 @@ clc;
 clear all;
 close all;
 
-
 plot_staircase_bool = true;
 eccentricity = 10;
 
@@ -13,7 +12,7 @@ conditions = {'Stationary', 'Dynamic', 'Flies'};
 %% set up files
 scriptDir = pwd;
 % repoDir = fileparts(scriptDir);
-mydir = '/Users/helenhu/Documents/GitHub/crowding-individual-difference/data/corr_firstSess';
+mydir = [scriptDir '/online_data'];
 d = dir(sprintf('%s/*.csv',mydir));
 files = {d.name};
 
@@ -39,55 +38,45 @@ for subj = 1:numSubj
     deviceSystemFamily = unique(mainOutput.deviceSystemFamily(cellfun(@(x) ~isempty(x), mainOutput.deviceSystemFamily)));
     assert(length(deviceSystemFamily) == 1, 'Incorrect device system input')
 
-    distanceByBlindspotCm = unique(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)));
-    maxDistanceByBlindspotCm = max(distanceByBlindspotCm);
-    assert(length(maxDistanceByBlindspotCm) == 1, 'Incorrect distance by blindspot input')
 
-    if maxDistanceByBlindspotCm >= 100
-        disp(distanceByBlindspotCm)
-    end
+    for cond = 1:length(conditions)
 
-    % 
-    % for cond = 1:length(conditions)
-    % 
-    %     condition = conditions{cond};
-    % 
-    %     for hemi = ["Left", "Right"]  % loop over meridian
+        condition = conditions{cond};
 
-            %meridian = lower(hemi);  % 'left' or 'right'
-            %conditionName = %sprintf('%s_R8_%s', condition, hemi);
+        for hemi = ["Left", "Right"]  % loop over meridian
+
+            meridian = lower(hemi);  % 'left' or 'right'
+            conditionName = sprintf('%s_%s', condition, hemi);
 
             % Extract trials for this condition and meridian
-            % trials = mainOutput(strcmp(mainOutput.conditionName, conditionName), :);
-            % 
-            % % Extract threshold and bouma
-            % threshold_vals = 10.^trials.questMeanAtEndOfTrialsLoop(~isnan(trials.questMeanAtEndOfTrialsLoop));
-            % assert(numel(threshold_vals) == 1, sprintf('file name: %s', mainFiles{subj}));
-            % 
-            % threshold = threshold_vals;
-            % bouma = threshold / eccentricity;
+            trials = mainOutput(strcmp(mainOutput.conditionName, conditionName), :);
 
-            % % check for bug
-            % goodThreshold_bool = ~abs(threshold - 4.99999999613144) < eps;
+            % Extract threshold and bouma
+            threshold_vals = 10.^trials.questMeanAtEndOfTrialsLoop(~isnan(trials.questMeanAtEndOfTrialsLoop));
+            assert(numel(threshold_vals) == 1, sprintf('file name: %s', mainFiles{subj}));
+
+            threshold = threshold_vals;
+            bouma = threshold / eccentricity;
+
+            % check for bug
+            goodThreshold_bool = ~abs(threshold - 4.99999999613144) < eps;
 
             % Add row to results
-            results(row,:) = table(subj, deviceSystemFamily, screenWidthCm, maxDistanceByBlindspotCm, 1, ...
-                'VariableNames', {'Subject','Device', 'ScreenWidth', 'distanceByBlindspot', 'GoodThreshold_bool'});
+            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, threshold, bouma, goodThreshold_bool, ...
+                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', 'Threshold', 'Bouma', 'GoodThreshold_bool'});
 
             row = row + 1;
-    % 
-    %     end
-    % end
+
+        end
+    end
 end
 
 
-%%
-writetable(results, 'corr_firstsess_debug.csv')
 
 %% filtering
 
-% results.Date = datetime(results.Date, 'InputFormat', 'yyyy-MM-dd');
-% results = sortrows(results, 'Date');
+results.Date = datetime(results.Date, 'InputFormat', 'yyyy-MM-dd');
+results = sortrows(results, 'Date');
 results = sortrows(results, 'ScreenWidth');
 
 fprintf('Total number of thresholds: %d\n', size(results, 1))
@@ -98,7 +87,7 @@ fprintf('Number of bad subjects: %d\n', length(unique(badThresholds.Subject)))
 
 goodThresholds = results(results.GoodThreshold_bool == 1, :);
 rowCounts = groupcounts(goodThresholds, 'Subject');
-completeSubjects = rowCounts.Subject(rowCounts.GroupCount == 1);
+completeSubjects = rowCounts.Subject(rowCounts.GroupCount == 6);
 goodSubjects = goodThresholds(ismember(goodThresholds.Subject, completeSubjects), :);
 
 
@@ -134,8 +123,8 @@ b(2).FaceColor = darkRed;    % for incomplete subjects
 xlabel('Screen width (cm)', 'FontSize', 15)
 ylabel('Number of subjects', 'FontSize', 15)
 xlim([0 80])
-ylim([0 40])
-title(sprintf('Screen Widths for Subjects Who Completed Session 2 (N = %d)', size(results,1)), 'FontSize', 20)
+ylim([0 20])
+title('Screen Widths (N = 70)', 'FontSize', 20)
 legend({'Complete dataset', 'Incomplete dataset'}, 'FontSize', 15)
 set(gca, 'FontSize', 15)
 box off
@@ -156,6 +145,7 @@ results_filtered = results( ...
 
 subj_filtered = unique(results_filtered.Subject);
 
+
 for ii = 1:length(subj_filtered)
 
     subj = subj_filtered(ii);
@@ -166,7 +156,17 @@ for ii = 1:length(subj_filtered)
     
 end
     
+%%
+
+for ii = 1:length(s
+
+    subj = subj_filtered(ii);
+    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+
+    fprintf('------ Subj %d ------\n', subj)
+    disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
     
+end
     
 %% plot histograms for Bouma factors
 % 
@@ -294,11 +294,6 @@ end
 % end
 % 
 % fclose(fileID);
-
-
-%%
-figure;
-h = histogram(results.distanceByBlindspot)
 
 %%
 function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1,minJOVbouma)
