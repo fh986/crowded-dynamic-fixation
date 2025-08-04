@@ -24,7 +24,10 @@ end
 mainFiles = unique(mainFiles);
 numSubj = length(mainFiles);
 
-%% extract thresholds
+
+%%
+% disp(mainFiles{11})
+%% compile results
 results = table();  
 row = 1;  
 
@@ -38,9 +41,15 @@ for subj = 1:numSubj
     deviceSystemFamily = unique(mainOutput.deviceSystemFamily(cellfun(@(x) ~isempty(x), mainOutput.deviceSystemFamily)));
     assert(length(deviceSystemFamily) == 1, 'Incorrect device system input')
 
-    distanceByBlindspotCm = unique(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)));
+    distanceByBlindspotCm = unique(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)),'stable');
+    if length(distanceByBlindspotCm) > 1
+        recalibratedBool = 1;
+    else
+        recalibratedBool = 0;
+    end
     maxDistanceByBlindspotCm = max(distanceByBlindspotCm);
-    assert(length(maxDistanceByBlindspotCm) == 1, 'Incorrect distance by blindspot input')
+    minDistanceByBlindspotCm = min(distanceByBlindspotCm);
+
 
 
     for cond = 1:length(conditions)
@@ -67,8 +76,13 @@ for subj = 1:numSubj
             goodThreshold_bool = ~abs(threshold - 4.99999999613144) < eps;
 
             % Add row to results
-            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, maxDistanceByBlindspotCm, threshold, bouma, goodThreshold_bool, ...
-                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', 'distanceByBlindspot', 'Threshold', 'Bouma', 'GoodThreshold_bool'});
+            results(row,:) = table(subj, {date}, {condition}, {meridian}, deviceSystemFamily, screenWidthCm, ...
+                maxDistanceByBlindspotCm, minDistanceByBlindspotCm, recalibratedBool, ...
+                threshold, bouma, goodThreshold_bool, ...
+                'VariableNames', {'Subject', 'Date', 'Condition', 'Meridian', 'Device', 'ScreenWidth', ...
+                'maxDistanceByBlindspot', 'minDistanceByBlindspot', 'recalibratedBool', ...
+                'Threshold', 'Bouma', 'GoodThreshold_bool'});
+
 
             row = row + 1;
 
@@ -78,6 +92,21 @@ end
 
 %%
 writetable(results, 'online_tracking_debug.csv')
+
+%% plot participants with long est distance but "good" thresholds
+% Filter the table
+validRows = ~isnan(results.minDistanceByBlindspot) & results.GoodThreshold_bool == 1;
+
+% Extract the Bouma values for those rows
+filteredBouma = results.Bouma(validRows);
+
+% Plot histogram
+figure;
+h = histogram(filteredBouma);
+% Optional customizations
+title('Histogram of Bouma (Filtered)');
+xlabel('Bouma');
+ylabel('Count');
 
 
 %% filtering
@@ -153,31 +182,31 @@ results_filtered = results( ...
 subj_filtered = unique(results_filtered.Subject);
 
 
-for ii = 1:length(subj_filtered)
-
-    subj = subj_filtered(ii);
-    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
-
-    fprintf('------ Subj %d ------\n', subj)
-    disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
-    
-end
+% for ii = 1:length(subj_filtered)
+% 
+%     subj = subj_filtered(ii);
+%     mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+% 
+%     fprintf('------ Subj %d ------\n', subj)
+%     disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
+% 
+% end
     
 %%
 
-for ii = 42
-
-    subj = ii;
-    mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
-    disp(mainFiles{subj})
-
-    prolificID = unique(mainOutput.ProlificParticipantID);
-    disp(prolificID)
-
-    fprintf('------ Subj %d ------\n', subj)
-    disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
-    
-end
+% for ii = 42
+% 
+%     subj = ii;
+%     mainOutput = readtable([mydir filesep mainFiles{subj}], 'VariableNamingRule', 'preserve');
+%     disp(mainFiles{subj})
+% 
+%     prolificID = unique(mainOutput.ProlificParticipantID);
+%     disp(prolificID)
+% 
+%     fprintf('------ Subj %d ------\n', subj)
+%     disp(mainOutput.viewingDistanceByBlindSpotCm(~isnan(mainOutput.viewingDistanceByBlindSpotCm)))
+% 
+% end
     
 %% plot histograms for Bouma factors
 % 
