@@ -7,7 +7,7 @@
 
 clc;
 clear all;
-close all;
+% close all;
 
 plot_staircase_bool = false;
 eccentricity = 10;
@@ -198,12 +198,12 @@ table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, '
 table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
 table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
 
-ylimit = [0 12];
+ylimit = [0 15];
 % bwidth = 0.1;
-xlimit = [0.03 1];
+xlimit = [0.03 1.2];
 
 minData = 0.05;
-maxData = 1;
+maxData = 1.2;
 numBins = 35; 
 binEdges = logspace(log10(minData), log10(maxData), numBins);
 binWidths = diff(binEdges);
