@@ -229,7 +229,7 @@ plotStackedHist(table_flies.BoumaRight,table_flies.BoumaLeft,binEdges,xlimit,yli
     'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
 xlabel('Bouma factor b')
 
-sgtitle(sprintf('Number of subjects: %d', height(table_flies)))
+sgtitle(sprintf('Number of subjects: %d; Number of thresholds: %d', height(table_flies), height(table_flies)*2))
 
 
 %%
