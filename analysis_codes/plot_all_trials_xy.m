@@ -75,8 +75,10 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
     trials_include = 1:length(stim_on);
     if contains(eyelinkFiles{subj}, 'KH2_K')
         trials_include = 2:length(stim_on);
-    end    
+    end 
 
+
+    n_blink = 0;
     for s = trials_include
 
         %%%%%%%%%%%%%%%%%%%%
@@ -112,6 +114,9 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
             [newGazePx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
             if nantrialBool
                 disp('Warning: nantrial')
+            end
+            if newGazePx ~= gazePx
+                n_blink = n_blink + 1;
             end
         else
             newGazePx = gazePx;
@@ -168,7 +173,6 @@ for subj = 33 % plots the participant shown in Figure 3 of Hu et al.
     plotOnSameFig(xValues,gaze_x_mtx(1:firstBlockEnd,:),gaze_y_mtx(1:firstBlockEnd,:),rightBool(1:firstBlockEnd),block_sequence(1))
     plotOnSameFig(xValues,gaze_x_mtx(secondBlockStart:secondBlockEnd,:),gaze_y_mtx(secondBlockStart:secondBlockEnd,:),rightBool(secondBlockStart:secondBlockEnd),block_sequence(2))
     plotOnSameFig(xValues,gaze_x_mtx(thirdBlockStart:thirdBlockEnd,:),gaze_y_mtx(thirdBlockStart:thirdBlockEnd,:),rightBool(thirdBlockStart:thirdBlockEnd,:),block_sequence(3))
-
     
 end
 

@@ -28,6 +28,7 @@ function [newGazePx,nantrialBool] = ignore_blink(gazePx,pxPerDeg,framesPerSec)
     difference = diff(replaceIdx);
     multipleBool = any(difference~=1);
     blinks = {};
+    
     if ~multipleBool
         blinks{1} = replaceIdx;
     else
@@ -47,17 +48,18 @@ function [newGazePx,nantrialBool] = ignore_blink(gazePx,pxPerDeg,framesPerSec)
         else
             for blinkNumber = 1:length(blinks)
                 thisBlink = blinks{blinkNumber};
-                replacePosition = [];
+                replacePosition = NaN;
                 
-                if ismember(size(gazeDeg,1),thisBlink)
-                    replacePosition = gazePx(thisBlink(1)-1,:);
-                else
-                    replacePosition = gazePx(thisBlink(end)+1,:);
-                end 
+                % if ismember(size(gazeDeg,1),thisBlink)
+                %     replacePosition = gazePx(thisBlink(1)-1,:);
+                % else
+                %     replacePosition = gazePx(thisBlink(end)+1,:);
+                % end 
     
                 for frame = thisBlink
                     newGazePx(frame,:) = replacePosition;
                 end
+                
             end
         end
     end
