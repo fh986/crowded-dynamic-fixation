@@ -16,6 +16,10 @@ function [drift] = calcDrift(currenttrial_ee,currenttrial_el,PixelPerDeg,framesP
     assert(size(gaze_fixatePx,1) == size(crosshair_fixatePx,1));
     assert(size(gaze_fixatePx,2) == size(crosshair_fixatePx,2));
 
+    % if size(gaze_fixatePx,1) == 0
+    %     disp('Warning: drift is NaN: participant did not fixate during track')
+    % end
+
     % takes the average of fixations as error
     drift = mean((gaze_fixatePx-crosshair_fixatePx),1);
 
