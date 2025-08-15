@@ -24,6 +24,7 @@ clc;
 clear all;
 close all;
 
+
 %% set up files
 % Get current directory and move one level up
 scriptDir = pwd;
@@ -44,6 +45,7 @@ recFrames_total = 2*recFrames +1;
 subj_stationary_rmse = NaN(numSubj,recFrames_total);
 subj_dynamic_rmse = NaN(numSubj,recFrames_total);
 subj_flies_rmse = NaN(numSubj,recFrames_total);
+subj_n_blink_trials = NaN(numSubj, 1);
 
 for subj = 1:numSubj
 
@@ -93,6 +95,7 @@ for subj = 1:numSubj
 
     % gaze analysis
     gaze_err_mtx = NaN(length(stim_on),recFrames_total); 
+    n_blink_trials = 0;
 
     for s = trials_include
 
@@ -136,6 +139,9 @@ for subj = 1:numSubj
             fprintf('Session %d', subj)
             fprintf('Condition: %s', currenttrial_ee_stimon.conditionName(1))
         end
+        if newGazePx ~= gazePx
+            n_blink_trials = n_blink_trials + 1;
+        end
 
         % calculate tracking error: the distance between crosshair and gaze
         diff_gaze_cross_Px = [];
@@ -169,8 +175,17 @@ for subj = 1:numSubj
 
     %flies
     [trialStart,trialEnd] = findCondTrials(plot_sequence{3},block_sequence,eyelinkFiles{subj});
-    subj_flies_rmse(subj,:) = rmseOverTrials(gaze_err_mtx(trialStart:trialEnd,:));    
+    subj_flies_rmse(subj,:) = rmseOverTrials(gaze_err_mtx(trialStart:trialEnd,:));  
+
+    % number of trials with blinks
+    subj_n_blink_trials(subj) = n_blink_trials;
 end
+
+
+%% calculate average percentage of trials with blinks
+avg_n_blink_trials = mean(subj_n_blink_trials);
+fprintf('Average percentage of trials with blinks: %f%. \n', avg_n_blink_trials./210*100);
+
 
 %% save gaze positions as a mat file to local folder
 

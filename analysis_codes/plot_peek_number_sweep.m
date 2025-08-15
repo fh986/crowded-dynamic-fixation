@@ -28,13 +28,13 @@ numSubj = length(cursorFiles);
 %% gaze analyses
 
 % set the peek criterion here
-peek_criterion = 1; % deg
+peek_criterion = 1.5; % deg
 
 subj_stationary_count = NaN(numSubj,1);
 subj_dynamic_count = NaN(numSubj,1);
 subj_flies_count = NaN(numSubj,1);
 
-for subj = 1:numSubj
+for subj = 1%:numSubj
 
     easyeyes = readtable([mydir filesep cursorFiles{subj}],'VariableNamingRule','preserve');
     mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
@@ -104,10 +104,10 @@ for subj = 1:numSubj
 
         framesPerSec = 60;
         eyedrift = calcDrift(currenttrial_ee_track,currenttrial_el_track,PixelPerDeg,framesPerSec);
-        if any(isnan(eyedrift))
-            fprintf('No Gaze Correction: subj = %d, trial = %d\n',subj,s);
-            eyedrift = [0 0];
-        end     
+        % if any(isnan(eyedrift))
+        %     fprintf('No Gaze Correction: subj = %d, trial = %d\n',subj,s);
+        %     % eyedrift = [0 0];
+        % end     
 
         %%%%%%%%%%%%%%%%%%
         % Gaze positions %
@@ -134,9 +134,9 @@ for subj = 1:numSubj
         % if the participant keeps blinking throughout the tracking period,
         % it will show up as a blank trial
         % if that's the case, print a warning message
-        if nantrialBool
-            fprintf('Empty gaze, exclude: subj = %d, trial = %d, condition = %s\n',subj,s,cell2mat(currenttrial_ee_stimon.conditionName(1)))
-        end
+        % if nantrialBool
+        %     fprintf('Empty gaze, exclude: subj = %d, trial = %d, condition = %s\n',subj,s,cell2mat(currenttrial_ee_stimon.conditionName(1)))
+        % end
 
         diff_gaze_cross_Px = [];
         for tt = 1:length(crosshairPx)
@@ -147,11 +147,13 @@ for subj = 1:numSubj
 
         % add to the counter if the participant peeks during the trial
         if any(diff_gaze_cross_Deg > peek_criterion)
+
             if contains(trialStimInfo.conditionName(s),'Stationary')
                 stationary_count = stationary_count + 1;
             elseif contains(trialStimInfo.conditionName(s),'Dynamic')
                 dynamic_count = dynamic_count + 1;
             elseif contains(trialStimInfo.conditionName(s),'Flies')
+                
                 flies_count = flies_count + 1;
             else
                 disp('Warning')
