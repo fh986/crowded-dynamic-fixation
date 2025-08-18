@@ -9,7 +9,7 @@ clc;
 clear all;
 % close all;
 
-plot_staircase_bool = false;
+plot_staircase_bool = true;
 eccentricity = 10;
 %% set up files
 scriptDir = pwd;
@@ -40,7 +40,7 @@ if plot_staircase_bool
     
         mainOutput = readtable([mydir filesep mainFiles{subj}]);
         ntrials = 35;
-        cond_seq = {'Stationary_Right1','Stationary_Right2',
+        cond_seq = {'Stationary_Right1','Stationary_Right2',...
             'Dynamic_Right1','Dynamic_Right2',...
             'Flies_Right1','Flies_Right2'};
         lineColors = {'#7E2F8E','#7E2F8E','#D95319','#D95319','#0072BD','#0072BD'};
