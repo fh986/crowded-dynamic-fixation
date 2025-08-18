@@ -201,7 +201,7 @@ table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, '
 table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
 table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
 
-ylimit = [0 5];
+ylimit = [0 8];
 % bwidth = 0.1;
 xlimit = [0.01 1.2];
 
