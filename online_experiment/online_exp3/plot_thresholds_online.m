@@ -9,7 +9,7 @@ clc;
 clear all;
 % close all;
 
-plot_staircase_bool = true;
+plot_staircase_bool = false;
 eccentricity = 10;
 %% set up files
 scriptDir = pwd;
@@ -151,21 +151,6 @@ for subj = 1:numSubj
     end
 end
 
-%% filter data based on quest SD and number of trials
-subj_large_questSD = unique(results.Subject(results.questSD_Test > 0.1 | results.questSD_Retest > 0.1));
-subj_not_enough_trials = unique(results.Subject(results.numTrials_test < 35 | results.numTrials_retest < 35)); 
-subj_wrong_est_distance = unique(results.Subject(results.distanceByBlindspotCm < 30 | results.distanceByBlindspotCm > 70));
-subj_exclude = unique([subj_large_questSD; subj_not_enough_trials; subj_wrong_est_distance]);
-
-fprintf('Number of subjects with large questSD: %d\n', length(subj_large_questSD))
-fprintf('Number of subjects with not enough trials: %d\n', length(subj_not_enough_trials))
-fprintf('Number of subjects with wrong viewing distance: %d\n', length(subj_wrong_est_distance))
-fprintf('Number of subjects being excluded: %d\n', length(subj_exclude))
-
-results_filtered = results(~ismember(results.Subject, subj_exclude), :);
-num_subj_remain = height(results_filtered)/3;
-fprintf('Plotting results for %d out of %d subjects... \n\n', num_subj_remain, numSubj)
-
 %% determine minimum threshold from Kurzawski et al., 2023, JOV
 
 repoDir = fileparts(fileparts(scriptDir));
@@ -190,6 +175,22 @@ minJOVbouma = round(min(jov_filtered_bouma), 3);
 
 fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbouma)
 
+%% filter data based on quest SD and number of trials
+subj_large_questSD = unique(results.Subject(results.questSD_Test > 0.1 | results.questSD_Retest > 0.1));
+subj_not_enough_trials = unique(results.Subject(results.numTrials_test < 35 | results.numTrials_retest < 35)); 
+subj_wrong_est_distance = unique(results.Subject(results.distanceByBlindspotCm < 30 | results.distanceByBlindspotCm > 70));
+subj_exclude = unique([subj_large_questSD; subj_not_enough_trials; subj_wrong_est_distance]);
+
+fprintf('Number of subjects with large questSD: %d\n', length(subj_large_questSD))
+fprintf('Number of subjects with not enough trials: %d\n', length(subj_not_enough_trials))
+fprintf('Number of subjects with wrong viewing distance: %d\n', length(subj_wrong_est_distance))
+fprintf('Number of subjects being excluded: %d\n', length(subj_exclude))
+
+results_filtered = results(~ismember(results.Subject, subj_exclude), :);
+results_out = results(ismember(results.Subject, subj_exclude), :);
+
+num_subj_remain = height(results_filtered)/3;
+fprintf('Plotting results for %d out of %d subjects... \n\n', num_subj_remain, numSubj)
 
 
 %% plot histograms for Bouma factors
