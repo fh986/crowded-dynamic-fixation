@@ -164,7 +164,7 @@ fprintf('Plotting results for %d out of %d subjects... \n\n', num_subj_remain, n
 
 %% determine minimum threshold from Kurzawski et al., 2023, JOV
 
-repoDir = fileparts(scriptDir);
+repoDir = fileparts(fileparts(scriptDir));
 jov_raw_data = readtable(sprintf('%s/analysis_codes/JoV23Data.csv',repoDir));
 
 % filter
@@ -175,7 +175,6 @@ jov_filtered_data = jov_filtered_data(~strcmp(jov_filtered_data.Meridian, 'Lower
 jov_filtered_data = jov_filtered_data(strcmp(jov_filtered_data.Font, 'Sloan'),:);
 jov_filtered_data = jov_filtered_data((jov_filtered_data.RadialEccentricity == 10),:);
 
-jov_filtered_data = jov_raw_data;
 fprintf('Number of thresholds: %d\n', size(jov_filtered_data,1))
 
 jov_filtered_crowding_distance = jov_filtered_data.CrowdingDistance;
@@ -231,6 +230,30 @@ plotStackedHist(table_flies.BoumaRight,table_flies.BoumaLeft,binEdges,xlimit,yli
 xlabel('Bouma factor b')
 
 sgtitle(sprintf('Number of subjects: %d; Number of thresholds: %d', height(table_flies), height(table_flies)*2))
+
+
+%% hist right only
+ylimit = [0 10];
+
+figure;
+subplot(3,1,1)
+plotStackedHist(table_stationary.BoumaRight,[],binEdges,xlimit,ylimit, ...
+    'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
+
+
+subplot(3,1,2)
+plotStackedHist(table_dynamic.BoumaRight,[],binEdges,xlimit,ylimit, ...
+    'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
+
+
+subplot(3,1,3)
+plotStackedHist(table_flies.BoumaRight,[],binEdges,xlimit,ylimit, ...
+    'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
+xlabel('Bouma factor b')
+
+sgtitle(sprintf('Right threshold only. \n Number of subjects: %d; Number of thresholds per condition: %d', height(table_flies), height(table_flies)))
+
+
 
 %%
 
