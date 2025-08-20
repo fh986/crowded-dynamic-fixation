@@ -176,21 +176,31 @@ minJOVbouma = round(min(jov_filtered_bouma), 3);
 fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbouma)
 
 %% filter data based on quest SD and number of trials
-% subj_large_questSD = unique(results.Subject(results.questSD_Test > 0.1 | results.questSD_Retest > 0.1));
-% subj_not_enough_trials = unique(results.Subject(results.numTrials_test < 35 | results.numTrials_retest < 35)); 
+subj_large_questSD = unique(results.Subject(results.questSD_Test > 0.1 | results.questSD_Retest > 0.1));
+subj_not_enough_trials = unique(results.Subject(results.numTrials_test < 35 | results.numTrials_retest < 35)); 
 subj_wrong_est_distance = unique(results.Subject(results.distanceByBlindspotCm < 30 | results.distanceByBlindspotCm > 70));
-% subj_exclude = unique([subj_large_questSD; subj_not_enough_trials; subj_wrong_est_distance]);
+subj_exclude = unique([subj_large_questSD; subj_wrong_est_distance]); % subj_not_enough_trials;
 
-% fprintf('Number of subjects with large questSD: %d\n', length(subj_large_questSD))
-% fprintf('Number of subjects with not enough trials: %d\n', length(subj_not_enough_trials))
+
+fprintf('Number of subjects with large questSD: %d\n', length(subj_large_questSD))
+fprintf('Number of subjects with not enough trials: %d\n', length(subj_not_enough_trials))
 fprintf('Number of subjects with wrong viewing distance: %d\n', length(subj_wrong_est_distance))
-% fprintf('Number of subjects being excluded: %d\n', length(subj_exclude))
+fprintf('Unique subjects who should be excluded: %d\n', length(subj_exclude))
 
-results_filtered = results(~ismember(results.Subject, subj_wrong_est_distance), :);%subj_exclude
-results_out = results(ismember(results.Subject, subj_wrong_est_distance), :);
+results_filtered = results(~ismember(results.Subject, subj_exclude), :);%subj_exclude
+results_out = results(ismember(results.Subject, subj_exclude), :);
 
 num_subj_remain = height(results_filtered)/3;
 fprintf('Plotting results for %d out of %d subjects... \n\n', num_subj_remain, numSubj)
+
+%% filter data based on calibrated distance only
+fprintf('Number of subjects with wrong viewing distance: %d\n', length(subj_wrong_est_distance))
+
+results_filtered2 = results(~ismember(results.Subject, subj_wrong_est_distance), :);%subj_exclude
+
+num_subj_remain = height(results_filtered2)/3;
+fprintf('Excluding wrong est viewing distance only: \nPlotting results for %d out of %d subjects... \n\n', num_subj_remain, numSubj)
+
 
 
 %% plot histograms for Bouma factors
@@ -236,73 +246,65 @@ xlabel('Bouma factor b')
 
 sgtitle(sprintf('Number of subjects: %d; Number of thresholds per condition: %d', height(table_flies), height(table_flies)*2))
 
+
 %%
-% 
-% figure;
-% scatter(table_dynamic.BoumaRight,table_dynamic.BoumaLeft,'filled');
-% hold on;
-% axis equal;
-% xlim([0,1.2])
-% ylim([0,1.2])
-% xline(0.096, 'r--')
-% yline(0.096, 'r--')
-% plot([0.05,1.1], [0.05, 1.1], 'r--')
-% ylabel('Left')
-% xlabel('Right')
-% title('Dynamic Bouma')
-% set(gca, 'YScale', 'log') 
-% set(gca, 'XScale', 'log') 
-% 
-% figure;
-% scatter(table_flies.BoumaRight,table_flies.BoumaLeft,'filled');
-% hold on;
-% axis equal;
-% xlim([0,1.2])
-% ylim([0,1.2])
-% xline(0.096, 'r--')
-% yline(0.096, 'r--')
-% plot([0.05,1.1], [0.05, 1.1], 'r--')
-% ylabel('Left')
-% xlabel('Right')
-% title('Flies Bouma')
-% 
-% set(gca, 'YScale', 'log') 
-% set(gca, 'XScale', 'log') 
-% 
-% 
-% %%
-% 
-% % plot_thresholds_online.m
-% % Author: Helen Hu
-% 
-% % This script acquires threshold data, one sessions for each
-% % participant, and plots a stacked histogram of all thresholds.
-% 
-% 
-% clc;
-% clear all;
-% % close all;
-% 
-% plot_staircase_bool = false;
-% eccentricity = 10;
-% %% set up files
-% scriptDir = pwd;
-% % repoDir = fileparts(scriptDir);
-% mydir = [scriptDir '/online_data'];
-% d = dir(sprintf('%s/*.csv',mydir));
-% files = {d.name};
-% 
-% for f = 1 :length(files)
-%     mainFile = dir(sprintf('%s/%s*.csv',mydir,files{f}(1:15)));
-%     mainFiles{f} = mainFile.name;
-% end
-% 
-% mainFiles = unique(mainFiles);
-% numSubj = length(mainFiles);
-% 
-% conditions = {'Stationary', 'Dynamic', 'Flies'};
-% 
-% 
+
+results_for_plotting = results_filtered2;
+table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
+table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
+table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
+
+ylimit = [0 10];
+% bwidth = 0.1;
+xlimit = [0.01 1.2];
+
+minData = 0.01;
+maxData = 1.2;
+numBins = 35; 
+binEdges = logspace(log10(minData), log10(maxData), numBins);
+binWidths = diff(binEdges);
+
+% make sure of that minJOVdata is included as a bin edge
+[~, index] = min(abs(binEdges - minJOVbouma));
+offset = binEdges(index) - minJOVbouma;
+binEdges = binEdges - offset;
+
+figure;
+subplot(3,1,1)
+plotStackedHist(table_stationary.BoumaTest,table_stationary.BoumaRetest,binEdges,xlimit,ylimit, ...
+    'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
+
+
+subplot(3,1,2)
+plotStackedHist(table_dynamic.BoumaTest,table_dynamic.BoumaRetest,binEdges,xlimit,ylimit, ...
+    'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
+
+
+subplot(3,1,3)
+plotStackedHist(table_flies.BoumaTest,table_flies.BoumaRetest,binEdges,xlimit,ylimit, ...
+    'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
+xlabel('Bouma factor b')
+
+sgtitle(sprintf('Number of subjects: %d; Number of thresholds per condition: %d', height(table_flies), height(table_flies)*2))
+
+%% test vs. retest
+
+
+
+plotScatter(table_stationary.BoumaTest,'Test', ...
+            table_stationary.BoumaRetest, 'Retest', ...
+            'Stationary Bouma');
+
+plotScatter(table_dynamic.BoumaTest,'Test', ...
+            table_dynamic.BoumaRetest, 'Retest', ...
+            'Dynamic Bouma');
+
+plotScatter(table_flies.BoumaTest,'Test', ...
+            table_flies.BoumaRetest, 'Retest', ...
+            'Crowded Dynamic Bouma');
+
+
+ 
 %%
 function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1,minJOVbouma)
         
@@ -339,5 +341,26 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
 
     end
     xline(minJOVbouma,'r--','LineWidth',2);
+
+end
+
+function [] = plotScatter(x_val, x_label, y_val, y_label, titletext)
+    figure;
+    scatter(x_val,y_val,'filled','SizeData',60, ...
+        'MarkerEdgeAlpha',0.6,'MarkerFaceAlpha',0.6);
+    hold on;
+    xline(0.096, 'r--', 'LineWidth',1)
+    yline(0.096, 'r--', 'LineWidth',1)
+    plot([0.01,10], [0.01, 10], 'r--', 'LineWidth',1)
+    ylabel(y_label)
+    xlabel(x_label)
+    title(titletext)
+    set(gca, 'YScale', 'log') 
+    set(gca, 'XScale', 'log') 
+    set(gca, 'FontSize', 18)
+    axis padded;
+    axis equal;
+    axis square;
+
 
 end
