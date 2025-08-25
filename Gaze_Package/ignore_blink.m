@@ -1,4 +1,4 @@
-function [newGazePx,nantrialBool] = ignore_blink(gazePx,pxPerDeg,framesPerSec)
+function [newGazePx,replaceIdx,nantrialBool] = ignore_blink(gazePx,pxPerDeg,framesPerSec)
 % detects blinks based on the criterion: saccade velocity > 2000 deg/sec
 % replaces the 100 msecs before and after the blink with the gaze position
 % in the frame after the blink
@@ -24,45 +24,60 @@ function [newGazePx,nantrialBool] = ignore_blink(gazePx,pxPerDeg,framesPerSec)
     replaceIdx(replaceIdx>size(gazeDeg,1)) = [];
     replaceIdx = unique(replaceIdx);
 
-    % are there multiple blinks?
-    difference = diff(replaceIdx);
-    multipleBool = any(difference~=1);
-    blinks = {};
-    
-    if ~multipleBool
-        blinks{1} = replaceIdx;
-    else
-        breaks = find(difference~=1);
-        breaks = [0,breaks,length(replaceIdx)];
-        for blinkNumber = 1:length(breaks)-1
-            blinks{blinkNumber} = replaceIdx(breaks(blinkNumber)+1:breaks(blinkNumber+1));
-        end
-    end
-
     newGazePx = gazePx;
     nantrialBool = 0;
+    % replace blinks with NaN
     if ~isempty(replaceIdx)
         if length(replaceIdx) == length(gazePx)
             newGazePx = NaN(size(gazePx));
             nantrialBool = 1;
         else
-            for blinkNumber = 1:length(blinks)
-                thisBlink = blinks{blinkNumber};
-                replacePosition = NaN;
-                
-                % if ismember(size(gazeDeg,1),thisBlink)
-                %     replacePosition = gazePx(thisBlink(1)-1,:);
-                % else
-                %     replacePosition = gazePx(thisBlink(end)+1,:);
-                % end 
-    
-                for frame = thisBlink
-                    newGazePx(frame,:) = replacePosition;
-                end
-                
-            end
+            newGazePx(replaceIdx,:) = NaN;
         end
     end
+    assert(size(newGazePx,1) == size(gazePx,1));
+    assert(size(newGazePx,2) == size(gazePx,2));
+
+
+    % % are there multiple blinks?
+    % difference = diff(replaceIdx);
+    % multipleBool = any(difference~=1);
+    % blinks = {};
+    % 
+    % if ~multipleBool
+    %     blinks{1} = replaceIdx;
+    % else
+    %     breaks = find(difference~=1);
+    %     breaks = [0,breaks,length(replaceIdx)];
+    %     for blinkNumber = 1:length(breaks)-1
+    %         blinks{blinkNumber} = replaceIdx(breaks(blinkNumber)+1:breaks(blinkNumber+1));
+    %     end
+    % end
+    % 
+    % newGazePx = gazePx;
+    % nantrialBool = 0;
+    % if ~isempty(replaceIdx)
+    %     if length(replaceIdx) == length(gazePx)
+    %         newGazePx = NaN(size(gazePx));
+    %         nantrialBool = 1;
+    %     else
+    %         for blinkNumber = 1:length(blinks)
+    %             thisBlink = blinks{blinkNumber};
+    %             replacePosition = NaN;
+    % 
+    %             % if ismember(size(gazeDeg,1),thisBlink)
+    %             %     replacePosition = gazePx(thisBlink(1)-1,:);
+    %             % else
+    %             %     replacePosition = gazePx(thisBlink(end)+1,:);
+    %             % end 
+    % 
+    %             for frame = thisBlink
+    %                 newGazePx(frame,:) = replacePosition;
+    %             end
+    % 
+    %         end
+    %     end
+    % end
 
 
 end
