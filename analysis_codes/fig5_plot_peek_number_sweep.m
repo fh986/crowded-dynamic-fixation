@@ -34,7 +34,7 @@ subj_stationary_count = NaN(numSubj,1);
 subj_dynamic_count = NaN(numSubj,1);
 subj_flies_count = NaN(numSubj,1);
 
-for subj = 1%:numSubj
+for subj = 1:numSubj
 
     easyeyes = readtable([mydir filesep cursorFiles{subj}],'VariableNamingRule','preserve');
     mainOutput = readtable([mydir filesep mainFiles{subj}],'VariableNamingRule','preserve');
@@ -112,14 +112,39 @@ for subj = 1%:numSubj
         %%%%%%%%%%%%%%%%%%
         % Gaze positions %
         %%%%%%%%%%%%%%%%%%
-        % x and y positions of gaze 
-        % then, analyze gaze      
-        trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp) & easyeyes.posixTimeSec < (stim_timestamp + timeframe_stimon);
+        % % x and y positions of gaze 
+        % % then, analyze gaze      
+        % trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp) & easyeyes.posixTimeSec < (stim_timestamp + timeframe_stimon);
+        % currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
+        % nearpointPx = str2num(cell2mat(currenttrial_ee_stimon.nearpointXYPx));
+        % crosshairPx = str2num(cell2mat(currenttrial_ee_stimon.crosshairPositionXYPx)) - nearpointPx;
+        % 
+        % trial_eyelink = eyelink.t1+14400 > (stim_timestamp) & eyelink.t1+14400 < (stim_timestamp + timeframe_stimon);
+        % currenttrial_el = eyelink(trial_eyelink,:);
+        % 
+        % gazePx = [];
+        % for tt = 1:length(crosshairPx)
+        %     [v,ind] = min(abs(currenttrial_el.t1 + 14400 - currenttrial_ee_stimon.posixTimeSec(tt)));
+        %     gazePx(tt,1) = currenttrial_el.gazeXYPix_1(ind) - eyedrift(1);
+        %     gazePx(tt,2) = -currenttrial_el.gazeXYPix_2(ind) - eyedrift(2);
+        % end
+        % 
+        % % ignore blinks
+        % [newGazePx,replaceIdx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
+        % if the participant keeps blinking throughout the tracking period,
+        % it will show up as a blank trial
+        % if that's the case, print a warning message
+        % if nantrialBool
+        %     fprintf('Empty gaze, exclude: subj = %d, trial = %d, condition = %s\n',subj,s,cell2mat(currenttrial_ee_stimon.conditionName(1)))
+        % end
+
+        % eliminate blinks   
+        trial_ee_stim = easyeyes.posixTimeSec > (stim_timestamp - 0.5) & easyeyes.posixTimeSec < (stim_timestamp + 0.5);
         currenttrial_ee_stimon = easyeyes(trial_ee_stim,:);
         nearpointPx = str2num(cell2mat(currenttrial_ee_stimon.nearpointXYPx));
         crosshairPx = str2num(cell2mat(currenttrial_ee_stimon.crosshairPositionXYPx)) - nearpointPx;
 
-        trial_eyelink = eyelink.t1+14400 > (stim_timestamp) & eyelink.t1+14400 < (stim_timestamp + timeframe_stimon);
+        trial_eyelink = eyelink.t1+14400 > (stim_timestamp - 0.5) & eyelink.t1+14400 < (stim_timestamp + 0.5);
         currenttrial_el = eyelink(trial_eyelink,:);
         
         gazePx = [];
@@ -128,19 +153,17 @@ for subj = 1%:numSubj
             gazePx(tt,1) = currenttrial_el.gazeXYPix_1(ind) - eyedrift(1);
             gazePx(tt,2) = -currenttrial_el.gazeXYPix_2(ind) - eyedrift(2);
         end
+        [igGazePx,replaceIdx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
 
-        % ignore blinks
-        [newGazePx,nantrialBool] = ignoreBlink(gazePx,PixelPerDeg,framesPerSec);
-        % if the participant keeps blinking throughout the tracking period,
-        % it will show up as a blank trial
-        % if that's the case, print a warning message
-        % if nantrialBool
-        %     fprintf('Empty gaze, exclude: subj = %d, trial = %d, condition = %s\n',subj,s,cell2mat(currenttrial_ee_stimon.conditionName(1)))
-        % end
+        % extract period with stimulus on the screen
+        targeton_idx = find(strcmp(currenttrial_ee_stimon.targetBool, 'TRUE'));
+        newCrossPx = crosshairPx(targeton_idx,:);
+        newGazePx = igGazePx(targeton_idx,:);
+
 
         diff_gaze_cross_Px = [];
-        for tt = 1:length(crosshairPx)
-            diff_gaze_cross_Px(tt) = norm(crosshairPx(tt,:) - newGazePx(tt,:));
+        for tt = 1:size(newCrossPx,1)
+            diff_gaze_cross_Px(tt) = norm(newCrossPx(tt,:) - newGazePx(tt,:));
         end
 
         diff_gaze_cross_Deg = diff_gaze_cross_Px./PixelPerDeg;
@@ -153,7 +176,6 @@ for subj = 1%:numSubj
             elseif contains(trialStimInfo.conditionName(s),'Dynamic')
                 dynamic_count = dynamic_count + 1;
             elseif contains(trialStimInfo.conditionName(s),'Flies')
-                
                 flies_count = flies_count + 1;
             else
                 disp('Warning')
@@ -169,154 +191,79 @@ for subj = 1%:numSubj
     subj_flies_count(subj) = flies_count;    
 end
 
+
+
+
 %% save to file
 matFile_name = sprintf('PeekingSummary_%f.mat',peek_criterion);
 save(matFile_name, 'subj_stationary_count', 'subj_dynamic_count', 'subj_flies_count');
-
+fprintf('Saved! Criterion: %f \n', peek_criterion)
 %% functions
-function [sem] = sem(data)
-    n = length(data);
-    data = data(~isnan(data));
-    std_dev = std(data);
-    sem = std_dev / sqrt(n);
-end
 
-function [medianValue, lowerError, upperError] = calculateQuartiles(data)
-    % Calculate the first quartile (Q1), median, and third quartile (Q3)
-    % Input: 
-    %   data - A vector of numerical values
-    % Outputs:
-    %   Q1 - First quartile (25th percentile)
-    %   medianValue - Median (50th percentile)
-    %   Q3 - Third quartile (75th percentile)
-
-    % Sort the data
-    sortedData = sort(data);
-    
-    % Calculate the quartiles
-    Q1 = quantile(sortedData, 0.25);
-    medianValue = quantile(sortedData, 0.50);
-    Q3 = quantile(sortedData, 0.75);
-    lowerError = medianValue - Q1;
-    upperError = Q3 - medianValue;
-end
-
-function [trialStart,trialEnd] = findCondTrials(plot_cond,block_sequence,subj_name)
-    whichBlock = find(strcmp(plot_cond,block_sequence));
-    trialStart = (whichBlock-1)*70+1;
-    trialEnd = whichBlock*70;
-    if contains(subj_name, 'MarcoLai061024') && trialEnd == 210
-        trialEnd = 209;
-    end
-    if contains(subj_name, 'KevinHong061624') 
-        trialEnd = trialEnd-1;
-        trialStart = trialStart+1;
-    end
-end
-
-
-function [rmse] = rmseOverTrials(gaze_mtx)
-
-    % y values: std across all trials over time
-    squared_distances = gaze_mtx .^ 2;
-    mean_squared_distances = nanmean(squared_distances, 1);
-    rmse = sqrt(mean_squared_distances);
-
-end
-
-
-function [] = plotStd(xValues,gaze_mtx,lineStyle,condition,lineColor)
-    % figure;clf;
-
-    % y values: std across all trials over time
-    std_over_trials = NaN(1,size(gaze_mtx,2));
-    for ts = 1:size(gaze_mtx,2)
-        position_trials = gaze_mtx(:,ts);
-        rm = isnan(position_trials);
-        position_trials(rm) = [];
-        std_over_trials(ts) = std(position_trials);
-    end
-
-
-    % plot gaze positions
-    ll = plot(xValues,std_over_trials,lineStyle,'LineWidth',2.5,'DisplayName',condition,'Color',lineColor);
-    ll.Color = [ll.Color,0.9];
-
-end
-
-function [] = createPatch(onset,offset)
-
-    % Create a patch to highlight the stimulus onset
-    y_limits = ylim();
-    stimulus_height = [y_limits(1) y_limits(1) y_limits(2) y_limits(2)];
-    stimulus_duration = [onset offset offset onset];
-    patch(stimulus_duration, stimulus_height, 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none','DisplayName','Stimulus On')
-
-end
-
-function [newGazePx,nantrialBool] = ignoreBlink(gazePx,pxPerDeg,framesPerSec)
-% detects blinks based on the criterion: saccade velocity > 2000 deg/sec
-% replaces the 100 msecs before and after the blink with the gaze position
-% in the frame after the blink
-% if the blink happens at the end of the sequence, replace with the frame
-% before the blink
-
-   
-    gazeDeg = gazePx/pxPerDeg;
-    
-    velocity = eyeVelocity(gazeDeg,framesPerSec);
-    delFrames = round(0.1*framesPerSec);
-    
-    replaceIdx = [];
-    for ii = 1:length(velocity)
-    
-       if velocity(ii) > 2000 || gazeDeg(ii,1) < -38
-            replaceIdx = [replaceIdx,ii-delFrames:ii+delFrames];
-       end
-
-    end
-    
-    replaceIdx(replaceIdx<=0) = [];
-    replaceIdx(replaceIdx>size(gazeDeg,1)) = [];
-    replaceIdx = unique(replaceIdx);
-
-    % are there multiple blinks?
-    difference = diff(replaceIdx);
-    multipleBool = any(difference~=1);
-    blinks = {};
-    if ~multipleBool
-        blinks{1} = replaceIdx;
-    else
-        breaks = find(difference~=1);
-        breaks = [0,breaks,length(replaceIdx)];
-        for blinkNumber = 1:length(breaks)-1
-            blinks{blinkNumber} = replaceIdx(breaks(blinkNumber)+1:breaks(blinkNumber+1));
-        end
-    end
-
-    newGazePx = gazePx;
-    nantrialBool = 0;
-    if ~isempty(replaceIdx)
-        if length(replaceIdx) == length(gazePx)
-            newGazePx = NaN(size(gazePx));
-            nantrialBool = 1;
-        else
-            for blinkNumber = 1:length(blinks)
-                thisBlink = blinks{blinkNumber};
-                replacePosition = [];
-                
-                if ismember(size(gazeDeg,1),thisBlink)
-                    replacePosition = gazePx(thisBlink(1)-1,:);
-                else
-                    replacePosition = gazePx(thisBlink(end)+1,:);
-                end 
-    
-                for frame = thisBlink
-                    newGazePx(frame,:) = replacePosition;
-                end
-            end
-        end
-    end
-
-
-end
+% 
+% function [newGazePx,nantrialBool] = ignoreBlink(gazePx,pxPerDeg,framesPerSec)
+% % detects blinks based on the criterion: saccade velocity > 2000 deg/sec
+% % replaces the 100 msecs before and after the blink with the gaze position
+% % in the frame after the blink
+% % if the blink happens at the end of the sequence, replace with the frame
+% % before the blink
+% 
+% 
+%     gazeDeg = gazePx/pxPerDeg;
+% 
+%     velocity = eyeVelocity(gazeDeg,framesPerSec);
+%     delFrames = round(0.1*framesPerSec);
+% 
+%     replaceIdx = [];
+%     for ii = 1:length(velocity)
+% 
+%        if velocity(ii) > 2000 || gazeDeg(ii,1) < -38
+%             replaceIdx = [replaceIdx,ii-delFrames:ii+delFrames];
+%        end
+% 
+%     end
+% 
+%     replaceIdx(replaceIdx<=0) = [];
+%     replaceIdx(replaceIdx>size(gazeDeg,1)) = [];
+%     replaceIdx = unique(replaceIdx);
+% 
+%     % are there multiple blinks?
+%     difference = diff(replaceIdx);
+%     multipleBool = any(difference~=1);
+%     blinks = {};
+%     if ~multipleBool
+%         blinks{1} = replaceIdx;
+%     else
+%         breaks = find(difference~=1);
+%         breaks = [0,breaks,length(replaceIdx)];
+%         for blinkNumber = 1:length(breaks)-1
+%             blinks{blinkNumber} = replaceIdx(breaks(blinkNumber)+1:breaks(blinkNumber+1));
+%         end
+%     end
+% 
+%     newGazePx = gazePx;
+%     nantrialBool = 0;
+%     if ~isempty(replaceIdx)
+%         if length(replaceIdx) == length(gazePx)
+%             newGazePx = NaN(size(gazePx));
+%             nantrialBool = 1;
+%         else
+%             for blinkNumber = 1:length(blinks)
+%                 thisBlink = blinks{blinkNumber};
+%                 replacePosition = [];
+% 
+%                 if ismember(size(gazeDeg,1),thisBlink)
+%                     replacePosition = gazePx(thisBlink(1)-1,:);
+%                 else
+%                     replacePosition = gazePx(thisBlink(end)+1,:);
+%                 end 
+% 
+%                 for frame = thisBlink
+%                     newGazePx(frame,:) = replacePosition;
+%                 end
+%             end
+%         end
+%     end
+% 
+% 
+% end
