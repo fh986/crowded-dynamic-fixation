@@ -54,20 +54,20 @@ med_peek_flies = median(peek_summary_flies,2);
 numBootstraps = 10000;
 confLevel = 0.68;
 
-[means_stationary,lowerError_stationary,upperError_stationary] = bootstrapMed(peek_summary_stationary,numBootstraps,confLevel);
-[means_dynamic,lowerError_dynamic,upperError_dynamic] = bootstrapMed(peek_summary_dynamic,numBootstraps,confLevel);
-[means_flies,lowerError_flies,upperError_flies] = bootstrapMed(peek_summary_flies,numBootstraps,confLevel);
+[medians_stationary,lowerError_stationary,upperError_stationary] = bootstrapMed(peek_summary_stationary,numBootstraps,confLevel);
+[medians_dynamic,lowerError_dynamic,upperError_dynamic] = bootstrapMed(peek_summary_dynamic,numBootstraps,confLevel);
+[medians_flies,lowerError_flies,upperError_flies] = bootstrapMed(peek_summary_flies,numBootstraps,confLevel);
 %% plot
 CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
 
 figure;
 
 hold on;
-errorbar(peek_criteria,means_stationary,lowerError_stationary,upperError_stationary,'-o','LineWidth',2,'Color',CData{1},'DisplayName','Stationary Fixation',...
+errorbar(peek_criteria,medians_stationary,lowerError_stationary,upperError_stationary,'-o','LineWidth',2,'Color',CData{1},'DisplayName','Stationary Fixation',...
     'CapSize',0,'MarkerSize',10)
-errorbar(peek_criteria,means_dynamic,lowerError_dynamic,upperError_dynamic,'-square','LineWidth',2,'Color',CData{2},'DisplayName','Dynamic Fixation',...
+errorbar(peek_criteria,medians_dynamic,lowerError_dynamic,upperError_dynamic,'-square','LineWidth',2,'Color',CData{2},'DisplayName','Dynamic Fixation',...
     'CapSize',0,'MarkerSize',10)
-errorbar(peek_criteria,means_flies,lowerError_flies,upperError_flies,'-d','LineWidth',2,'Color',CData{3},'DisplayName','Crowded Dynamic Fixation',...
+errorbar(peek_criteria,medians_flies,lowerError_flies,upperError_flies,'-d','LineWidth',2,'Color',CData{3},'DisplayName','Crowded Dynamic Fixation',...
     'CapSize',0,'MarkerSize',10)%,'CapSize',0
 xlim([0 2]);ylim([0 50])
 xticks([0 0.5 1 1.5 2])

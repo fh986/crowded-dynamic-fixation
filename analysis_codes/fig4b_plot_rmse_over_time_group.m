@@ -22,7 +22,7 @@
 
 clc;
 clear all;
-close all;
+% close all;
 
 
 %% set up files
@@ -133,11 +133,11 @@ for subj = 1:numSubj
             gazePx(tt,2) = -currenttrial_el.gazeXYPix_2(ind) - eyedrift(2);
         end
 
-        [newGazePx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
+        [newGazePx,replaceIdx,nantrialBool] = ignore_blink(gazePx,PixelPerDeg,framesPerSec);
         if nantrialBool
             disp('Warning: empty trial')
             fprintf('Session %d', subj)
-            fprintf('Condition: %s', currenttrial_ee_stimon.conditionName(1))
+            fprintf('Condition: %s', cell2mat(currenttrial_ee_stimon.conditionName(1)))
         end
         if newGazePx ~= gazePx
             n_blink_trials = n_blink_trials + 1;

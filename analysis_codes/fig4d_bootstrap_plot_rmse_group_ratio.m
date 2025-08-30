@@ -18,7 +18,7 @@
 % This file also contains x values for plotting
 
 clear all;
-close all;
+% close all;
 clc;
 
 %% set up
