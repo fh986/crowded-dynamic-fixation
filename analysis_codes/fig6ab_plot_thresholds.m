@@ -9,7 +9,7 @@
 
 clc;
 clear all;
-close all;
+% close all;
  
 %% set up files
 % Get current directory and move one level up
@@ -58,8 +58,7 @@ for subj = 1:numSubj
     idx_block_flies = find(strcmp(block_sequence,'Flies'));
     subj_flies_right(subj) = thresholds_raw(2*idx_block_flies-1);
     subj_flies_left(subj) = thresholds_raw(2*idx_block_flies);
-
-
+    
 end
 
 %% calculate averages
@@ -236,12 +235,12 @@ CData2 = { ...
     [0, 0.5000, 0.8000] ...        % Blue variation
 };
 
-ylimit = [0 10];
+ylimit = [0 12];
 % bwidth = 0.1;
-xlimit = [0.03 1];
+xlimit = [0.01 1.21];
 
-minData = 0.05;
-maxData = 1;
+minData = 0.01;
+maxData = 1.2;
 numBins = 35; 
 binEdges = logspace(log10(minData), log10(maxData), numBins);
 binWidths = diff(binEdges);
@@ -278,9 +277,10 @@ function [] = plotStackedHist(data1,data2,binEdges,xlimit,ylimit,titletxt,color1
     set(gca,'FontSize',15)
 
     set(gca, 'XScale', 'log');
-    xticks([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, ...
-            0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]);
+    xticks([0.02, 0.04, 0.06, 0.08, ...
+            0.1, 0.2, 0.4, 0.6, 0.8, 1]);
     set(gca, 'XMinorTick', 'off');  % since we’re setting everything manually
+    xtickangle(45)
 
     ylabel('Frequency')
     yticks(min(ylimit):2:max(ylimit))
