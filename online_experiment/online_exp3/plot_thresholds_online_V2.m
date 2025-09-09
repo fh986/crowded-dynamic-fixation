@@ -186,6 +186,8 @@ num_subj_remain = height(results_filtered)/3;
 fprintf('Plotting results for %d out of %d subjects... \n\n', num_subj_remain, numSubj)
 
 
+save('subj_exclude.mat','subj_exclude')
+
 %% plot histograms for Bouma factors
  
 CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
