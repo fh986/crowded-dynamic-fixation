@@ -5,6 +5,8 @@
 % participant, and plots a stacked histogram of all thresholds.
 
 
+addpath(genpath('/Applications/Psychtoolbox'))
+
 clc;
 clear all;
 % close all;
@@ -171,12 +173,51 @@ xlabel('Bouma factor b')
 % sgtitle(sprintf('Number of subjects: %d; Number of thresholds per condition: %d', height(table_flies), height(table_flies)*2))
 
 
-%%
+%% Plot sess 1 and 2 combined
+
+
 plotCondScatter(table_stationary, 'Stationary', minJOVbouma)
 
 plotCondScatter(table_dynamic, 'Dynamic', minJOVbouma)
 
 plotCondScatter(table_flies, 'Flies', minJOVbouma)
+
+
+%% Plot hist with 1 and 2 combined
+
+
+ylimit = [0 6];
+% bwidth = 0.1;
+xlimit = [0.01 1.21];
+
+minData = 0.01;
+maxData = 1.2;
+numBins = 35; 
+binEdges = logspace(log10(minData), log10(maxData), numBins);
+binWidths = diff(binEdges);
+
+% make sure of that minJOVdata is included as a bin edge
+[~, index] = min(abs(binEdges - minJOVbouma));
+offset = binEdges(index) - minJOVbouma;
+binEdges = binEdges - offset;
+
+figure;
+subplot(3,1,1)
+plotStackedHist(table_stationary.BoumaPredicted,[],binEdges,xlimit,ylimit, ...
+    'Stationary fixation',cell2mat(CData(1)),minJOVbouma)
+
+
+subplot(3,1,2)
+plotStackedHist(table_dynamic.BoumaPredicted,[],binEdges,xlimit,ylimit, ...
+    'Dynamic fixation',cell2mat(CData(2)),minJOVbouma)
+
+
+subplot(3,1,3)
+plotStackedHist(table_flies.BoumaPredicted,[],binEdges,xlimit,ylimit, ...
+    'Crowded dynamic fixation',cell2mat(CData(3)),minJOVbouma)
+xlabel('Bouma factor b')
+
+
 %%
 function [t] = quest_estimate_from_trials(levels, responses, ...
     tGuess, tGuessSd, pThreshold, beta, delta, gamma)
