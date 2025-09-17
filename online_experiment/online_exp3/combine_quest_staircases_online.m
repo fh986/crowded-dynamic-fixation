@@ -11,7 +11,6 @@ clc;
 clear all;
 % close all;
 
-plot_staircase_bool = false;
 eccentricity = 10;
 %% set up files
 scriptDir = pwd;
@@ -30,12 +29,12 @@ numSubj = length(mainFiles);
 
 conditions = {'Stationary', 'Dynamic', 'Flies'};
 
-%% filter out subjects excluded for final analysis
-load('subj_exclude.mat');
-
-fprintf('Number of subjects excluded in the final analysis: %d\n', length(subj_exclude))
-
-    
+% %% filter out subjects excluded for final analysis
+% load('subj_exclude.mat');
+% 
+% fprintf('Number of subjects excluded in the final analysis: %d\n', length(subj_exclude))
+% 
+% 
 
 %% extract thresholds
 results = table();  
