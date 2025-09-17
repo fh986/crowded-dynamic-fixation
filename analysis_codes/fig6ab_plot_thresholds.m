@@ -24,7 +24,7 @@ mydir = fullfile(repoDir,'data_include_threshold_18ppl_paired');
 
 numSubj = length(cursorFiles);
 
-%% calculate thresholds
+%% acquire thresholds
 subj_stationary_left = nan(1,numSubj);
 subj_stationary_right = nan(1,numSubj);
 subj_dynamic_left = nan(1,numSubj);
