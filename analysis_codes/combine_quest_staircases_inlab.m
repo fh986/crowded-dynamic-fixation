@@ -28,7 +28,46 @@ numSess = length(cursorFiles);
 
 conditions = {'Stationary', 'Dynamic', 'Flies'};
 
+%% plot staircases
+
+eccentricity = 10;
+
+for subj = 20
+
+    mainOutput = readtable([mydir filesep mainFiles{subj}]);
+    ntrials = 35;
+    cond_seq = {'Stationary_Right1','Stationary_Right2', ...
+        'Dynamic_Right1','Dynamic_Right2','Flies_Right1','Flies_Right2'};
+    lineColors = {'#7E2F8E','#7E2F8E','#D95319','#D95319','#0072BD','#0072BD'};
+    disp(mainFiles{subj})
+
+    figure;clf
+    hold on;
+    ct = 1;
+    for condition = 1:length(cond_seq)
+
+        t_block_cond = mainOutput(strcmp(mainOutput.conditionName,cond_seq(condition)),:);
+        h(ct) = plot(10.^t_block_cond.questMeanBeforeThisTrialResponse,'Color',cell2mat(lineColors(ct)),'LineWidth',2);
+        ct = ct + 1;
+        
+        bouma = 10 ^ t_block_cond.questMeanAtEndOfTrialsLoop(end)/eccentricity;
+        disp(bouma)
     
+    end
+    h(2).LineStyle = '-.';
+    h(4).LineStyle = '-.';
+    h(6).LineStyle = '-.';
+    xlabel('Trials');
+    ylabel('Quest Mean Before This Trial');
+    xlim([1,35])
+    % ylim([0,15])
+    legend(h,cond_seq, 'Location','bestoutside');
+    hold off;
+    set(gca,'FontSize',18)
+    title(sprintf('Participant #%d',subj))
+
+end
+
 
 %% extract thresholds
 results = table();  
@@ -220,13 +259,13 @@ plotCondScatter(table_flies, 'Flies', minJOVbouma, ...
 %% Plot hist with 1 and 2 combined
 
 
-ylimit = [0 10];
+ylimit = [0 8];
 % bwidth = 0.1;
-xlimit = [0.01 1.21];
+xlimit = [0.04 1.21];
 
 minData = 0.01;
 maxData = 1.2;
-numBins = 35; 
+numBins = 40; 
 binEdges = logspace(log10(minData), log10(maxData), numBins);
 binWidths = diff(binEdges);
 
