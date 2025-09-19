@@ -36,6 +36,8 @@ conditions = {'Stationary', 'Dynamic', 'Flies'};
 % 
 % 
 
+%%
+
 %% extract thresholds
 results = table();  
 row = 1;  
@@ -126,6 +128,13 @@ fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbou
 
 
 
+%% filter out participant with estimated Bouma of > 10
+% crowding distance would be 100 deg which is impossible
+
+ind_too_large = find(results.BoumaPredicted > 10);
+subj_too_large = unique(results(ind_too_large,:).Subject);
+rows_to_delete = ismember(results.Subject, subj_too_large);
+results_clean = results(~rows_to_delete, :);
 
 
 %% plot histograms for Bouma factors
@@ -133,7 +142,7 @@ fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbou
 CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
 CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
 
-results_for_plotting = results;
+results_for_plotting = results_clean;
 table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
 table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
 table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
@@ -217,7 +226,78 @@ plotStackedHist(table_flies.BoumaPredicted,[],binEdges,xlimit,ylimit, ...
 xlabel('Bouma factor b')
 
 
+%% Print out standard deviation and mode for each condition
+% SD of log thresholds
+stationary_sd = std(log10(table_stationary.BoumaPredicted));
+fprintf('SD of log of stationary thresholds: %f\n', stationary_sd)
+
+dynamic_sd = std(log10(table_dynamic.BoumaPredicted));
+fprintf('SD of log of dynamic thresholds: %f\n', dynamic_sd)
+
+flies_sd = std(log10(table_flies.BoumaPredicted));
+fprintf('SD of log of flies thresholds: %f\n', flies_sd);
+
 %%
+% modes of thresholds
+stationary_mode = histMode(table_stationary.BoumaPredicted, binEdges, 'mean');
+fprintf('Mode of stationary thresholds: %f\n', stationary_mode)
+
+dynamic_mode = histMode(table_dynamic.BoumaPredicted, binEdges, 'mean');
+fprintf('Mode of dynamic thresholds: %f\n', dynamic_mode)
+
+flies_mode = histMode(table_flies.BoumaPredicted, binEdges, 'mean');
+fprintf('Mode of flies thresholds: %f\n', flies_mode)
+
+
+%%
+
+function mode_est = histMode(data, binEdges, tieStrategy)
+% histMode Estimate the mode using histogram binning
+%
+%   mode_est = histMode(data, binEdges)
+%       returns the midpoints of the fullest bin(s).
+%
+%   mode_est = histMode(data, binEdges, tieStrategy)
+%       tieStrategy options:
+%           'all'   - return all tied modal bins (default)
+%           'first' - return the first tied bin
+%           'last'  - return the last tied bin
+%           'mean'  - return the average of all tied bins
+%
+% Example:
+%   data = randn(100,1);
+%   edges = -3:0.5:3;
+%   mode_est = histMode(data, edges, 'mean');
+
+    if nargin < 3
+        tieStrategy = 'all';
+    end
+
+    % Compute histogram counts
+    [counts, edges] = histcounts(data, binEdges);
+
+    % Find the fullest bin(s)
+    maxCount = max(counts);
+    modalBins = find(counts == maxCount);
+
+    % Bin midpoints
+    mids = mean([edges(modalBins); edges(modalBins+1)], 1);
+
+    % Handle ties according to chosen strategy
+    switch tieStrategy
+        case 'all'
+            mode_est = mids;          % return all tied bins
+        case 'first'
+            mode_est = mids(1);       % return first
+        case 'last'
+            mode_est = mids(end);     % return last
+        case 'mean'
+            mode_est = mean(mids);    % average across all ties
+        otherwise
+            error('Unknown tieStrategy: %s', tieStrategy);
+    end
+end
+
 function [t] = quest_estimate_from_trials(levels, responses, ...
     tGuess, tGuessSd, pThreshold, beta, delta, gamma)
 % levels:    N×1 vector of stimulus intensities (in the SAME units you use for Quest;
