@@ -71,7 +71,7 @@ for subj = 1:numSubj
         responses = trials_sent.trials_response;
         assert(size(levelProposed,1) == size(responses, 1))
 
-        threshold_predicted_log = quest_estimate_from_trials(levelProposed, responses);
+        [threshold_predicted_log, threshold_predicted_sd] = quest_estimate_from_trials(levelProposed, responses);
         threshold_predicted = 10 ^ threshold_predicted_log;
 
 
@@ -86,9 +86,9 @@ for subj = 1:numSubj
             bouma_predicted = threshold_predicted ./ eccentricity;
     
             % Add a row to the results table
-            results(row,:) = table(subj, {condition}, bouma_test, bouma_retest, bouma_predicted, ...
+            results(row,:) = table(subj, {condition}, bouma_test, bouma_retest, bouma_predicted, threshold_predicted_sd,...
                                     threshold_test, threshold_retest, threshold_predicted, ...
-                                   'VariableNames', {'Subject', 'Condition', 'BoumaTest', 'BoumaRetest', 'BoumaPredicted', ...
+                                   'VariableNames', {'Subject', 'Condition', 'BoumaTest', 'BoumaRetest', 'BoumaPredicted', 'questPredictedSD',...
                                    'ThresholdTest', 'ThresholdRetest', 'ThresholdPredicted'});
     
             row = row + 1;
@@ -131,21 +131,25 @@ fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbou
 %% filter out participant with estimated Bouma of > 10
 % crowding distance would be 100 deg which is impossible
 
-ind_too_large = find(results.BoumaPredicted > 10);
-subj_too_large = unique(results(ind_too_large,:).Subject);
+% ind_too_large = find(results.BoumaPredicted > 10);
+% subj_too_large = unique(results(ind_too_large,:).Subject);
+
+ind_large_sd = find(results.questPredictedSD > 0.1);
+subj_too_large = unique(results(ind_large_sd,:).Subject);
+
 rows_to_delete = ismember(results.Subject, subj_too_large);
 results_clean = results(~rows_to_delete, :);
 
+results_for_plotting = results;
+
+table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
+table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
+table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
 
 %% plot histograms for Bouma factors
  
 CData = {[0.4940, 0.1840, 0.5560],[0.8500, 0.3250, 0.0980],[0, 0.4470, 0.7410]};
 CData2 = {[0.5600, 0.1600, 0.6000],[0.8700, 0.3700, 0.1300],[0, 0.5000, 0.8000]};
-
-results_for_plotting = results_clean;
-table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
-table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
-table_flies = results_for_plotting(strcmp(results_for_plotting.Condition, 'Flies'),:);
 
 ylimit = [0 8];
 % bwidth = 0.1;
@@ -237,16 +241,16 @@ fprintf('SD of log of dynamic thresholds: %f\n', dynamic_sd)
 flies_sd = std(log10(table_flies.BoumaPredicted));
 fprintf('SD of log of flies thresholds: %f\n', flies_sd);
 
-%%
-% modes of thresholds
-stationary_mode = histMode(table_stationary.BoumaPredicted, binEdges, 'mean');
-fprintf('Mode of stationary thresholds: %f\n', stationary_mode)
 
-dynamic_mode = histMode(table_dynamic.BoumaPredicted, binEdges, 'mean');
-fprintf('Mode of dynamic thresholds: %f\n', dynamic_mode)
+stationary_sd = median(table_stationary.BoumaPredicted);
+fprintf('Median of stationary thresholds: %f\n', stationary_sd)
 
-flies_mode = histMode(table_flies.BoumaPredicted, binEdges, 'mean');
-fprintf('Mode of flies thresholds: %f\n', flies_mode)
+dynamic_sd = median(table_dynamic.BoumaPredicted);
+fprintf('Median of dynamic thresholds: %f\n', dynamic_sd)
+
+flies_sd = median(table_flies.BoumaPredicted);
+fprintf('Median of flies thresholds: %f\n', flies_sd);
+
 
 
 %%
@@ -298,7 +302,7 @@ function mode_est = histMode(data, binEdges, tieStrategy)
     end
 end
 
-function [t] = quest_estimate_from_trials(levels, responses, ...
+function [t, sd] = quest_estimate_from_trials(levels, responses, ...
     tGuess, tGuessSd, pThreshold, beta, delta, gamma)
 % levels:    N×1 vector of stimulus intensities (in the SAME units you use for Quest;
 %            typically log10 contrast). If you stored linear contrast c, use log10(c).
@@ -336,6 +340,7 @@ function [t] = quest_estimate_from_trials(levels, responses, ...
     % Alternatives:
     % t  = QuestMode(q);    % MAP estimate
     % t  = QuestQuantile(q);% median
+    sd = QuestSd(q)
 end
 
 
