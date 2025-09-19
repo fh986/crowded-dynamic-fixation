@@ -228,6 +228,8 @@ subj_dynamic_rightB = subj_dynamic_right./10;
 subj_flies_leftB = subj_flies_left./10;
 subj_flies_rightB = subj_flies_right./10;
 
+
+fprintf('Minimum Bouma with crowded dynamic: %f\n', min([subj_flies_leftB, subj_flies_rightB]))
 %%
 CData2 = { ...
     [0.5600, 0.1600, 0.6000], ...  % Purple variation
@@ -237,7 +239,7 @@ CData2 = { ...
 
 ylimit = [0 12];
 % bwidth = 0.1;
-xlimit = [0.01 1.21];
+xlimit = [0.04 1.21];
 
 minData = 0.01;
 maxData = 1.2;
