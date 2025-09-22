@@ -29,44 +29,44 @@ numSess = length(cursorFiles);
 conditions = {'Stationary', 'Dynamic', 'Flies'};
 
 %% plot staircases
-
-eccentricity = 10;
-
-for subj = 20
-
-    mainOutput = readtable([mydir filesep mainFiles{subj}]);
-    ntrials = 35;
-    cond_seq = {'Stationary_Right1','Stationary_Right2', ...
-        'Dynamic_Right1','Dynamic_Right2','Flies_Right1','Flies_Right2'};
-    lineColors = {'#7E2F8E','#7E2F8E','#D95319','#D95319','#0072BD','#0072BD'};
-    disp(mainFiles{subj})
-
-    figure;clf
-    hold on;
-    ct = 1;
-    for condition = 1:length(cond_seq)
-
-        t_block_cond = mainOutput(strcmp(mainOutput.conditionName,cond_seq(condition)),:);
-        h(ct) = plot(10.^t_block_cond.questMeanBeforeThisTrialResponse,'Color',cell2mat(lineColors(ct)),'LineWidth',2);
-        ct = ct + 1;
-        
-        bouma = 10 ^ t_block_cond.questMeanAtEndOfTrialsLoop(end)/eccentricity;
-        disp(bouma)
-    
-    end
-    h(2).LineStyle = '-.';
-    h(4).LineStyle = '-.';
-    h(6).LineStyle = '-.';
-    xlabel('Trials');
-    ylabel('Quest Mean Before This Trial');
-    xlim([1,35])
-    % ylim([0,15])
-    legend(h,cond_seq, 'Location','bestoutside');
-    hold off;
-    set(gca,'FontSize',18)
-    title(sprintf('Participant #%d',subj))
-
-end
+% 
+% eccentricity = 10;
+% 
+% for subj = 20
+% 
+%     mainOutput = readtable([mydir filesep mainFiles{subj}]);
+%     ntrials = 35;
+%     cond_seq = {'Stationary_Right1','Stationary_Right2', ...
+%         'Dynamic_Right1','Dynamic_Right2','Flies_Right1','Flies_Right2'};
+%     lineColors = {'#7E2F8E','#7E2F8E','#D95319','#D95319','#0072BD','#0072BD'};
+%     disp(mainFiles{subj})
+% 
+%     figure;clf
+%     hold on;
+%     ct = 1;
+%     for condition = 1:length(cond_seq)
+% 
+%         t_block_cond = mainOutput(strcmp(mainOutput.conditionName,cond_seq(condition)),:);
+%         h(ct) = plot(10.^t_block_cond.questMeanBeforeThisTrialResponse,'Color',cell2mat(lineColors(ct)),'LineWidth',2);
+%         ct = ct + 1;
+% 
+%         bouma = 10 ^ t_block_cond.questMeanAtEndOfTrialsLoop(end)/eccentricity;
+%         disp(bouma)
+% 
+%     end
+%     h(2).LineStyle = '-.';
+%     h(4).LineStyle = '-.';
+%     h(6).LineStyle = '-.';
+%     xlabel('Trials');
+%     ylabel('Quest Mean Before This Trial');
+%     xlim([1,35])
+%     % ylim([0,15])
+%     legend(h,cond_seq, 'Location','bestoutside');
+%     hold off;
+%     set(gca,'FontSize',18)
+%     title(sprintf('Participant #%d',subj))
+% 
+% end
 
 
 %% extract thresholds
@@ -122,9 +122,10 @@ for subj = 1:(numSess/2)
         assert(size(levelProposed_left,1) == size(responses_left, 1))
         assert(size(levelProposed_right,1) == size(responses_right, 1))
         
-        threshold_predicted_left_log = quest_estimate_from_trials(levelProposed_left, responses_left);
+        [threshold_predicted_left_log, threshold_predicted_left_sd] = quest_estimate_from_trials(levelProposed_left, responses_left);
+        
         threshold_predicted_left = 10 ^ threshold_predicted_left_log;
-        threshold_predicted_right_log = quest_estimate_from_trials(levelProposed_right, responses_right);
+        [threshold_predicted_right_log, threshold_predicted_right_sd] = quest_estimate_from_trials(levelProposed_right, responses_right);
         threshold_predicted_right = 10 ^ threshold_predicted_right_log;
 
 
@@ -133,7 +134,6 @@ for subj = 1:(numSess/2)
         threshold_left_retest = 10.^trials_left_retest.questMeanAtEndOfTrialsLoop(~isnan(trials_left_retest.questMeanAtEndOfTrialsLoop));
         threshold_right_test = 10.^trials_right_test.questMeanAtEndOfTrialsLoop(~isnan(trials_right_test.questMeanAtEndOfTrialsLoop));
         threshold_right_retest = 10.^trials_right_retest.questMeanAtEndOfTrialsLoop(~isnan(trials_right_retest.questMeanAtEndOfTrialsLoop));
-
         if numel(threshold_left_test) == 1 && numel(threshold_left_retest) == 1 ...
                 && numel(threshold_right_test) == 1 && numel(threshold_right_retest) == 1
     
@@ -146,8 +146,10 @@ for subj = 1:(numSess/2)
             % Add a row to the results table
             results(row,:) = table(subj, {condition}, bouma_left_test, bouma_left_retest, bouma_left_predicted, ...
                                     bouma_right_test, bouma_right_retest, bouma_right_predicted, ...
+                                    threshold_predicted_left_sd, threshold_predicted_right_sd, ...
                                    'VariableNames', {'Subject', 'Condition', 'BoumaLeftTest', 'BoumaLeftRetest', 'BoumaLeftPredicted', ...
-                                   'BoumaRightTest', 'BoumaRightRetest', 'BoumaRightPredicted'});
+                                   'BoumaRightTest', 'BoumaRightRetest', 'BoumaRightPredicted', ...
+                                   'sdLeft', 'sdRight'});
     
             row = row + 1;
 
@@ -292,7 +294,7 @@ xlabel('Bouma factor b')
 
 
 %%
-function [t] = quest_estimate_from_trials(levels, responses, ...
+function [t, sd] = quest_estimate_from_trials(levels, responses, ...
     tGuess, tGuessSd, pThreshold, beta, delta, gamma)
 % levels:    N×1 vector of stimulus intensities (in the SAME units you use for Quest;
 %            typically log10 contrast). If you stored linear contrast c, use log10(c).
@@ -330,7 +332,10 @@ function [t] = quest_estimate_from_trials(levels, responses, ...
     % Alternatives:
     % t  = QuestMode(q);    % MAP estimate
     % t  = QuestQuantile(q);% median
+    sd = QuestSd(q);
 end
+
+
 
 
 
