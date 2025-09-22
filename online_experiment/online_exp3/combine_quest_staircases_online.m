@@ -131,16 +131,15 @@ fprintf('Minimum Bouma factor from Kurzawski et al., 2023, JoV: %f\n', minJOVbou
 %% filter out participant with estimated Bouma of > 10
 % crowding distance would be 100 deg which is impossible
 
-% ind_too_large = find(results.BoumaPredicted > 10);
-% subj_too_large = unique(results(ind_too_large,:).Subject);
-
-ind_large_sd = find(results.questPredictedSD > 0.1);
-subj_too_large = unique(results(ind_large_sd,:).Subject);
+ind_too_large = find(results.BoumaPredicted > 10);
+subj_too_large = unique(results(ind_too_large,:).Subject);
 
 rows_to_delete = ismember(results.Subject, subj_too_large);
 results_clean = results(~rows_to_delete, :);
 
-results_for_plotting = results;
+results_for_plotting = results_clean;
+
+fprintf('Plotting %f out of %f subjects...', size(results_for_plotting,1)/3, numSubj)
 
 table_stationary = results_for_plotting(strcmp(results_for_plotting.Condition, 'Stationary'),:);
 table_dynamic = results_for_plotting(strcmp(results_for_plotting.Condition, 'Dynamic'),:);
@@ -233,20 +232,20 @@ xlabel('Bouma factor b')
 %% Print out standard deviation and mode for each condition
 % SD of log thresholds
 stationary_sd = std(log10(table_stationary.BoumaPredicted));
-fprintf('SD of log of stationary thresholds: %f\n', stationary_sd)
+fprintf('SD of log of stationary thresholds: %f\n', stationary_sd);
 
 dynamic_sd = std(log10(table_dynamic.BoumaPredicted));
-fprintf('SD of log of dynamic thresholds: %f\n', dynamic_sd)
+fprintf('SD of log of dynamic thresholds: %f\n', dynamic_sd);
 
 flies_sd = std(log10(table_flies.BoumaPredicted));
 fprintf('SD of log of flies thresholds: %f\n', flies_sd);
 
 
 stationary_sd = median(table_stationary.BoumaPredicted);
-fprintf('Median of stationary thresholds: %f\n', stationary_sd)
+fprintf('Median of stationary thresholds: %f\n', stationary_sd);
 
 dynamic_sd = median(table_dynamic.BoumaPredicted);
-fprintf('Median of dynamic thresholds: %f\n', dynamic_sd)
+fprintf('Median of dynamic thresholds: %f\n', dynamic_sd);
 
 flies_sd = median(table_flies.BoumaPredicted);
 fprintf('Median of flies thresholds: %f\n', flies_sd);
@@ -340,7 +339,7 @@ function [t, sd] = quest_estimate_from_trials(levels, responses, ...
     % Alternatives:
     % t  = QuestMode(q);    % MAP estimate
     % t  = QuestQuantile(q);% median
-    sd = QuestSd(q)
+    sd = QuestSd(q);
 end
 
 
